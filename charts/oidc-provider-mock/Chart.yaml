@@ -1,5 +1,5 @@
 apiVersion: v2
-name: mlflow-tracking-server
+name: oidc-provider-mock
 description: A Helm chart for Dockerized Mock OpenID Provider
 type: application
 version: 1.0.1
