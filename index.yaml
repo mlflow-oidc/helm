@@ -1,0 +1,25 @@
+apiVersion: v1
+entries:
+  mlflow-tracking-server:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2025-05-19T02:34:33.753291764Z"
+    dependencies:
+    - name: common
+      repository: https://technicaldomain.github.io/helm/
+      version: 2.1.4
+    description: A Helm chart for Dockerized Mock OpenID Provider
+    digest: 5bcc8668456e60c99a3def69364285553cae8a6be8e03ae8b4c6770a46cc2d8c
+    home: https://github.com/mlflow-oidc/helm
+    maintainers:
+    - email: alex@kharkevich.org
+      name: Alexander Kharkevich
+    name: mlflow-tracking-server
+    sources:
+    - https://github.com/mlflow-oidc/helm
+    - https://github.com/mlflow-oidc/oidc-provider-mock-docker
+    type: application
+    urls:
+    - https://github.com/mlflow-oidc/helm/releases/download/mlflow-tracking-server-1.0.1/mlflow-tracking-server-1.0.1.tgz
+    version: 1.0.1
+generated: "2025-05-19T02:34:33.753302173Z"
