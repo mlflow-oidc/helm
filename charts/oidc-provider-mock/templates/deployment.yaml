@@ -1,0 +1,54 @@
+{{- template "common.deployment" (list . "application.deployment") -}}
+{{- define "application.deployment" -}}
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          image: {{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Starting socat and oidc-provider-mock..."
+              socat TCP-LISTEN:8080,fork TCP:localhost:9400 &
+              pipx run --spec oidc-provider-mock oidc-provider-mock --port 9400 &
+              
+              echo "Waiting for OIDC provider to be ready..."
+              until curl -s http://localhost:9400/; do sleep 5; done
+              echo "OIDC provider is ready."
+              echo "Populating users..."
+              {{- range .Values.config.users }}
+              curl --location --request PUT 'http://localhost:9400/users/{{ .username }}' \
+              --header 'Content-Type: application/json' \
+              --data-raw '{"email": "{{ .username }}", "name": "{{ .name }}", "groups": {{ .groups | toJson }}}'
+              {{- end }}
+              echo "All users have been created successfully."
+              wait
+          restartPolicy: Never
+      restartPolicy: OnFailure
+{{- end -}}

@@ -1,0 +1,45 @@
+replicaCount: 1
+
+image:
+  registry: ghcr.io/mlflow-oidc
+  name: oidc-provider-mock
+  tag: latest
+
+config:
+  users: {}
+    # - username: alice@example.com
+    #   name: Alice
+    #   groups:
+    #     - mlflow-users
+    #     - experiments-reader
+    #     - prompts-reader
+    #     - models-reader
+    # - username: bob@example.com
+    #   name: Bob
+    #   groups:
+    #     - mlflow-users
+    #     - experiments-editor
+    #     - prompts-editor
+    #     - models-editor
+    # - username: charlie@example.com
+    #   name: Charlie
+    #   groups:
+    #     - mlflow-users
+    #     - experiments-manager
+    #     - prompts-manager
+    #     - models-manager
+    # - username: dave@example.com
+    #   name: Dave
+    #   groups:
+    #     - mlflow-users
+    #     - experiments-no-access
+    #     - prompts-no-access
+    #     - models-no-access
+    # - username: eve@example.com
+    #   name: Eve
+    #   groups:
+    #     - mlflow-users
+    # - username: frank@example.com
+    #   name: Frank
+    #   groups:
+    #     - mlflow-admin
