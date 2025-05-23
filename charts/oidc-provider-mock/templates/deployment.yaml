@@ -39,7 +39,7 @@ spec:
               socat TCP-LISTEN:8080,fork TCP:localhost:9400 &
               SOCAT_PID=$!
 
-              pipx run --spec oidc-provider-mock oidc-provider-mock --port 9400 &
+              oidc-provider-mock --port 9400 &
               OIDC_PID=$!
 
               echo "Waiting for OIDC provider to be ready..."
@@ -49,13 +49,18 @@ spec:
 
               echo "OIDC provider is ready."
               echo "Populating users..."
+              {{- range .Values.config.users }}
+              curl --location --request PUT 'http://localhost:9400/users/{{ .username }}' \
+              --header 'Content-Type: application/json' \
+              --data-raw '{"email": "{{ .username }}", "name": "{{ .name }}", "groups": {{ .groups | toJson }}}'
+              {{- end }}
               echo "All users have been created successfully."
 
               # Wait for any of the background processes to exit
               while true; do
                 wait "$SOCAT_PID" && break
                 wait "$OIDC_PID" && break
-                sleep 1
+                sleep 30
               done
       restartPolicy: Always
 {{- end -}}
