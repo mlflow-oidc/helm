@@ -1,0 +1,36 @@
+{{- template "common.deployment" (list . "application.deployment") -}}
+{{- define "application.deployment" -}}
+{{- $fullname := include "common.fullname" . -}}
+{{- $config := default (dict) .Values.config -}}
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          ports:
+          - name: {{ default "http" $config.applicationName }}
+            containerPort: {{ default "8080" $config.port }}
+            protocol: TCP
+          image: "{{ default "ghcr.io/technicaldomain" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
+          command: ["mlflow"]
+          args:
+            - server
+          {{- if .Values.oidc.enabled }}
+            - --app-name
+            - {{ .Values.oidc.app_name }}
+          {{- end }}
+            - --host={{ default "0.0.0.0" $config.host }}
+            - --port={{ default "8080" $config.port }}
+            - --backend-store-uri={{ .Values.backend_store.db_uri }}
+            - --default-artifact-root={{ .Values.artifact_store.default_artifact_root }}
+          {{- if .Values.artifact_store.serve_artifacts }}
+            - --serve-artifacts
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ template "common.fullname" . }}
+            {{ include "common.envvar.shared.configs" . | indent 2 }}
+            {{ include "common.envvar.shared.secrets" . | indent 2 }}
+          {{ include "common.resources" . | nindent 10 }}
+{{- end -}}

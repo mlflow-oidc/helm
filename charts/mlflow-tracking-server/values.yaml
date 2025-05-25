@@ -1,0 +1,70 @@
+replicaCount: 1
+
+image:
+  registry: ghcr.io/technicaldomain
+  name: mlflow-tracking-server
+  tag: latest
+
+oidc:
+  enabled: true
+  app_name: "oidc-auth"
+  secret_key: "definme"
+  redirect_uri: "https://mlflow.technicaldomain.xyz/callback"
+  discovery_url: "https://oidc-mock.technicaldomain.xyz/.well-known/openid-configuration"
+  client_secret: "definme"
+  client_id: "definme"
+  provider_type: "oidc"
+  provider_display_name: "Sign in with Demo OIDC Provider"
+  scope: "openid,profile,email,groups"
+  group_name: "mlflow-access"
+  admin_group_name: "mlflow-admin"
+  default_mlflow_permission: MANAGE
+  session_type: "filesystem"
+  users_db_uri: "sqlite:///mlflow_users.db"
+  # users_db_uri: "postgresql+psycopg2://$(MLFLOW_AUTH_DB_USERNAME):$(MLFLOW_AUTH_DB_PASSWORD)@$(MLFLOW_AUTH_DB_HOST):$(MLFLOW_AUTH_DB_PORT)/$(MLFLOW_AUTH_DB_DATABASE)"
+  # session_type: "redis"
+  # redis_host: "localhost"
+  # redis_port: 6379
+  # MS Entra ID group detection plugin
+  # group_detection_plugin: "mlflow_oidc_auth.plugins.group_detection_microsoft_entra_id"
+serviceAccount:
+  create: false
+  annotations: {}
+    # For example, to use eks service account annotation
+    # https://docs.aws.amazon.com/eks/latest/userguide/pod-configuration.html
+    # eks.amazonaws.com/role-arn: ""
+  # name: my-service-account-custom-name
+
+backend_store:
+  db_uri: "sqlite:///:memory"
+  # Postgres backend example
+  # db_uri: "postgresql+psycopg2://username:password@host:port/database"
+  # MySQL backend example
+  # db_uri: "mysql+pymysql://username:password@host:port/database"
+  # Generic backend example
+  # db_uri: "$(DB_TYPE)+$(DB_DRIVER)://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_DATABASE)"
+
+artifact_store:
+  # Local filesystem example
+  default_artifact_root: "./mlruns"
+  # AWS S3 example
+  # default_artifact_root: "s3://my-bucket/mlruns"
+  # Azure Blob Storage example
+  # default_artifact_root: "wasbs://<container>@<storage-account>.blob.core.windows.net/<path>"
+  # Google Cloud Storage example
+  # default_artifact_root: "gs://my-bucket/mlruns"
+  serve_artifacts: true
+
+# Inject environment variables from existing ConfigMaps or Secrets
+# sharedSecrets:
+#   - secret-1
+#   - secret-2
+# sharedConfigs:
+#   - config-1
+#   - config-2
+
+# additional environment variables
+config: {}
+#   data:
+#     key: value
+#     key2: value2

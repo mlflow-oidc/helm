@@ -1,0 +1,35 @@
+{{- template "common.configmap" (list . "application.env_configmap") -}}
+{{- define "application.env_configmap" -}}
+data:
+{{- if .Values.oidc.enabled }}
+  SECRET_KEY: {{ required "Required for OIDC configuration" .Values.oidc.secret_key | quote }}
+  OIDC_REDIRECT_URI: {{ required "Required for OIDC configuration" .Values.oidc.redirect_uri | quote }}
+  OIDC_DISCOVERY_URL: {{ required "Required for OIDC configuration" .Values.oidc.discovery_url | quote }}
+  OIDC_CLIENT_SECRET: {{ required "Required for OIDC configuration" .Values.oidc.client_secret | quote }}
+  OIDC_CLIENT_ID: {{ required "Required for OIDC configuration" .Values.oidc.client_id | quote }}
+  OIDC_PROVIDER_TYPE: {{ required "Required for OIDC configuration" .Values.oidc.provider_type | quote }}
+  OIDC_PROVIDER_DISPLAY_NAME: {{ required "Required for OIDC configuration" .Values.oidc.provider_display_name | quote }}
+  OIDC_SCOPE: {{ required "Required for OIDC configuration" .Values.oidc.scope | quote }}
+  OIDC_GROUP_NAME: {{ required "Required for OIDC configuration" .Values.oidc.group_name | quote }}
+  OIDC_ADMIN_GROUP_NAME: {{ required "Required for OIDC configuration" .Values.oidc.admin_group_name | quote }}
+  DEFAULT_MLFLOW_PERMISSION: {{ default "MANAGE"  .Values.oidc.default_mlflow_permission }}
+  LOG_LEVEL: {{ default "INFO" .Values.oidc.log_level }}
+  SESSION_TYPE: {{ .Values.oidc.session_type }}
+  OIDC_USERS_DB_URI: {{ required "Required for OIDC configuration" .Values.oidc.users_db_uri | quote }}
+  {{- if eq .Values.oidc.session_type "filesystem" }}
+  SESSION_FILE_DIR: {{ default "./flask_session/" .Values.oidc.session_file_dir | quote }}
+  {{- end }}
+  {{- if eq .Values.oidc.session_type "redis" }}
+  REDIS_HOST: {{ required "Required for Redis cache" .Values.oidc.redis_host | quote }}
+  REDIS_PORT: {{ required "Required for Redis cache" .Values.oidc.redis_port | quote }}
+  {{- end }}
+  {{- if .Values.oidc.group_detection_plugin }}
+  OIDC_GROUP_DETECTION_PLUGIN: {{ .Values.oidc.group_detection_plugin | quote }}
+  {{- end }}
+{{- end }}
+  {{- with .Values.config.data }}
+  {{- range $key, $value := . }}
+  {{ $key | upper }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+{{- end -}}
