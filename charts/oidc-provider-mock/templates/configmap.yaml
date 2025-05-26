@@ -1,0 +1,39 @@
+{{- template "common.configmap" (list . "application.landing_page") -}}
+{{- define "application.landing_page" -}}
+data:
+  index.html: |
+    {% extends "_base.html" %} {% block content %}
+    <h1>OpenID Connect Provider Mock</h1>
+    <p>
+        The following user accounts are available for testing:
+    </p>
+    <ul>
+    {{- range .Values.config.users }}
+      <li>
+        <strong>{{ .name }} ({{ .username }})</strong>
+        <ul>
+          {{- range .groups }}
+            <li>{{ . }}</li>
+          {{- end }}
+        </ul>
+      </li>
+    {{- end }}
+    </ul>
+    <ul>
+    <li>
+        <a href="https://github.com/geigerzaehler/oidc-provider-mock"
+        >Project on Github</a
+        >
+    </li>
+    <li>
+        <a href="/.well-known/openid-configuration">OpenID Discovery Document</a>
+    </li>
+    <li>
+        <a href="/oauth2/authorize">Client Authorization</a>
+    </li>
+    <li>
+        <a href="/oidc/login">Self login</a>
+    </li>
+    </ul>
+    {% endblock %}
+{{- end -}}

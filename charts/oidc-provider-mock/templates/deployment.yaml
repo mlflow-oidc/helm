@@ -62,5 +62,13 @@ spec:
                 wait "$OIDC_PID" && break
                 sleep 30
               done
+          volumeMounts:
+            - name: index-html
+              mountPath: {{ .Values.index.location }}
+              subPath: index.html
+      volumes:
+        - name: index-html
+          configMap:
+            name: {{ template "common.fullname" . }}
       restartPolicy: Always
 {{- end -}}

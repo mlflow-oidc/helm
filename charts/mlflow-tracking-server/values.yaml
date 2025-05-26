@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  registry: ghcr.io/technicaldomain
+  registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
   tag: latest
 

@@ -3,7 +3,7 @@ name: mlflow-tracking-server
 description: A Helm chart for MlFlow Tracking Server
 icon: https://raw.githubusercontent.com/mlflow/mlflow/master/assets/logo.svg
 type: application
-version: 1.0.0
+version: 1.0.1
 appVersion: "2.17.0"
 home: https://github.com/mlflow-oidc/helm
 sources:

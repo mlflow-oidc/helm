@@ -5,6 +5,9 @@ image:
   name: oidc-provider-mock
   tag: latest
 
+index:
+  location: /usr/local/lib/python3.13/site-packages/oidc_provider_mock/templates/index.html
+
 config:
   users: {}
     # - username: alice@example.com
