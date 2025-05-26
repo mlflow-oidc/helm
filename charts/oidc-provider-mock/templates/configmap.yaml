@@ -2,38 +2,105 @@
 {{- define "application.landing_page" -}}
 data:
   index.html: |
-    {% extends "_base.html" %} {% block content %}
-    <h1>OpenID Connect Provider Mock</h1>
-    <p>
-        The following user accounts are available for testing:
-    </p>
+    {% extends "_base.html" %}
+    {% block content %}
+    <main class="container">
+      <h3>OpenID Connect Provider Mock</h3>
+      <p>Please use user email address to log in.</p>
+
+      <h4>Available Test Users</h4>
+      <ul>
+        {{- range .Values.config.users }}
+        <li>
+          <strong>{{ .name }} ({{ .username }})</strong>
+          <ul>
+            {{- range .groups }}
+            <li>{{ . }}</li>
+            {{- end }}
+          </ul>
+        </li>
+        {{- end }}
+      </ul>
+    </main>
+    {% endblock %}
+
+    {% block footer %}
+    <footer class="container">
+      <hr />
+      <ul>
+        <li>
+          <a href="https://github.com/mlflow-oidc/oidc-provider-mock-docker" target="_blank">
+            Docker Image on GitHub
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/mlflow-oidc/helm" target="_blank">
+            Helm Chart on GitHub
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/geigerzaehler/oidc-provider-mock" target="_blank">
+            Project on GitHub
+          </a>
+        </li>
+        <li>
+          <a href="/.well-known/openid-configuration">
+            OpenID Discovery Document
+          </a>
+        </li>
+        <li>
+          <a href="/oauth2/authorize">
+            Client Authorization
+          </a>
+        </li>
+        <li>
+          <a href="/oidc/login">
+            Self Login
+          </a>
+        </li>
+      </ul>
+    </footer>
+    {% endblock %}
+
+  authorization_form.html: |
+    {% extends "_base.html" %}
+    {% block content %}
+    <h1>Authorize Client</h1>
+    <p>Client ID: <code>{{ client_id }}</code></p>
+    <form method="post">
+    {% if sub_missing %}
+    <input
+        type="text"
+        name="sub"
+        placeholder="sub"
+        required
+        autofocus
+        aria-invalid="true"
+        aria-describedby="sub-missing"
+    />
+    <small id="sub-missing">The field is missing</small>
+    {% else %}
+    <input type="text" name="sub" placeholder="sub" required autofocus />
+    {% endif %}
+    <button type="submit">Authorize</button>
+    </form>
+    <form method="post">
+    <button type="submit" name="action" value="deny">Deny</button>
+    </form>
+    <p>You will be redirected to {{ redirect_uri }}</p>
+    <h4>Available Test Users</h4>
     <ul>
-    {{- range .Values.config.users }}
+      {{- range .Values.config.users }}
       <li>
         <strong>{{ .name }} ({{ .username }})</strong>
         <ul>
           {{- range .groups }}
-            <li>{{ . }}</li>
+          <li>{{ . }}</li>
           {{- end }}
         </ul>
       </li>
-    {{- end }}
-    </ul>
-    <ul>
-    <li>
-        <a href="https://github.com/geigerzaehler/oidc-provider-mock"
-        >Project on Github</a
-        >
-    </li>
-    <li>
-        <a href="/.well-known/openid-configuration">OpenID Discovery Document</a>
-    </li>
-    <li>
-        <a href="/oauth2/authorize">Client Authorization</a>
-    </li>
-    <li>
-        <a href="/oidc/login">Self login</a>
-    </li>
+      {{- end }}
     </ul>
     {% endblock %}
+
 {{- end -}}

@@ -5,8 +5,9 @@ image:
   name: oidc-provider-mock
   tag: latest
 
-index:
-  location: /usr/local/lib/python3.13/site-packages/oidc_provider_mock/templates/index.html
+static:
+  index: /usr/local/lib/python3.13/site-packages/oidc_provider_mock/templates/index.html
+  authorization_form: /usr/local/lib/python3.13/site-packages/oidc_provider_mock/templates/authorization_form.html
 
 config:
   users: {}

@@ -63,11 +63,14 @@ spec:
                 sleep 30
               done
           volumeMounts:
-            - name: index-html
-              mountPath: {{ .Values.index.location }}
+            - name: static-files
+              mountPath: {{ .Values.static.index }}
               subPath: index.html
+            - name: static-files
+              mountPath: {{ .Values.static.authorization_form }}
+              subPath: authorization_form.html
       volumes:
-        - name: index-html
+        - name: static-files
           configMap:
             name: {{ template "common.fullname" . }}
       restartPolicy: Always
