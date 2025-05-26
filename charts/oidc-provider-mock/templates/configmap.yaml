@@ -8,7 +8,7 @@ data:
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
     />
-    <main style="padding-bottom: 4rem;">
+    <main style="padding-bottom: 6rem; padding-top: 2rem; padding-left: 6rem; padding-right: 2rem;">
       <h3>OpenID Connect Provider Mock</h3>
       <p>Please use user email address to log in.</p>
 

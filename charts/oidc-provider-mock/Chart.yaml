@@ -2,7 +2,7 @@ apiVersion: v2
 name: oidc-provider-mock
 description: A Helm chart for Dockerized Mock OpenID Provider
 type: application
-version: 1.1.4
+version: 1.1.5
 appVersion: "1.0.0"
 home: https://github.com/mlflow-oidc/helm
 sources:
