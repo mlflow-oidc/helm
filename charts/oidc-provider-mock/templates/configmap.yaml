@@ -2,9 +2,13 @@
 {{- define "application.landing_page" -}}
 data:
   index.html: |
-    {% extends "_base.html" %}
-    {% block content %}
-    <main class="container">
+    <!doctype html>
+    <html lang="en">
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <main style="padding-bottom: 4rem;">
       <h3>OpenID Connect Provider Mock</h3>
       <p>Please use user email address to log in.</p>
 
@@ -22,27 +26,27 @@ data:
         {{- end }}
       </ul>
     </main>
-    <footer class="container" style="position: fixed; bottom: 0; width: 100%; background-color: var(--background-color);">
+    <footer style="position: fixed; bottom: 0; width: 100%; background-color: white;">
       <hr />
       <ul style="display: flex; justify-content: space-around; list-style: none; padding: 0;">
         <li>
           <a href="https://github.com/mlflow-oidc/oidc-provider-mock-docker" target="_blank">
-            Docker Image on GitHub
+            Docker Image
           </a>
         </li>
         <li>
           <a href="https://github.com/mlflow-oidc/helm" target="_blank">
-            Helm Chart on GitHub
+            Helm Chart
           </a>
         </li>
         <li>
           <a href="https://github.com/geigerzaehler/oidc-provider-mock" target="_blank">
-            Project on GitHub
+            Project
           </a>
         </li>
         <li>
           <a href="/.well-known/openid-configuration">
-            OpenID Discovery Document
+            OpenID Discovery
           </a>
         </li>
         <li>
@@ -57,7 +61,7 @@ data:
         </li>
       </ul>
     </footer>
-    {% endblock %}
+    </html>
 
   authorization_form.html: |
     {% extends "_base.html" %}
