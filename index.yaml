@@ -3,6 +3,28 @@ entries:
   mlflow-tracking-server:
   - apiVersion: v2
     appVersion: 2.17.0
+    created: "2025-07-06T05:00:28.317635957Z"
+    dependencies:
+    - name: common
+      repository: https://technicaldomain.github.io/helm/
+      version: 2.1.4
+    description: A Helm chart for MlFlow Tracking Server
+    digest: 54d396b3ef7675d231091d2e503919e21babe64497bbd289750be7692b3f02f4
+    home: https://github.com/mlflow-oidc/helm
+    icon: https://raw.githubusercontent.com/mlflow/mlflow/master/assets/logo.svg
+    maintainers:
+    - email: alex@kharkevich.org
+      name: Alexander Kharkevich
+    name: mlflow-tracking-server
+    sources:
+    - https://github.com/mlflow-oidc/helm
+    - https://github.com/mlflow-oidc/mlflow-tracking-server-docker
+    type: application
+    urls:
+    - https://github.com/mlflow-oidc/helm/releases/download/mlflow-tracking-server-1.1.2/mlflow-tracking-server-1.1.2.tgz
+    version: 1.1.2
+  - apiVersion: v2
+    appVersion: 2.17.0
     created: "2025-07-06T04:09:38.899267243Z"
     dependencies:
     - name: common
@@ -343,4 +365,4 @@ entries:
     urls:
     - https://github.com/mlflow-oidc/helm/releases/download/oidc-provider-mock-1.0.1/oidc-provider-mock-1.0.1.tgz
     version: 1.0.1
-generated: "2025-07-06T04:09:38.899306417Z"
+generated: "2025-07-06T05:00:28.317681032Z"
