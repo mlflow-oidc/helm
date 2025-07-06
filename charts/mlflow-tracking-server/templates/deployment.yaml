@@ -23,7 +23,7 @@ spec:
             - --host={{ default "0.0.0.0" $config.host }}
             - --port={{ default "8080" $config.port }}
             - --backend-store-uri={{ .Values.backend_store.db_uri }}
-            - --artifact-destination={{ .Values.artifact_store.default_artifact_root }}
+            - --artifacts-destination={{ .Values.artifact_store.default_artifact_root }}
             # - --default-artifact-root={{ .Values.artifact_store.default_artifact_root }}
           {{- if .Values.artifact_store.serve_artifacts }}
             - --serve-artifacts
