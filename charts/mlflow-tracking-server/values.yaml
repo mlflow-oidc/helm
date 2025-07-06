@@ -55,6 +55,20 @@ artifact_store:
   # default_artifact_root: "gs://my-bucket/mlruns"
   serve_artifacts: true
 
+# Persistent Volume Claim configuration
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /mlflow-data
+  # User and group IDs for the volume
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsGroup: 1000
+  # Annotations for the PVC
+  annotations: {}
+
 # Inject environment variables from existing ConfigMaps or Secrets
 # sharedSecrets:
 #   - secret-1
