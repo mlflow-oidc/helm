@@ -46,7 +46,7 @@ backend_store:
 
 artifact_store:
   # Local filesystem example
-  default_artifact_root: "./mlruns"
+  default_artifact_root: "/mlflow-data"
   # AWS S3 example
   # default_artifact_root: "s3://my-bucket/mlruns"
   # Azure Blob Storage example
@@ -54,6 +54,16 @@ artifact_store:
   # Google Cloud Storage example
   # default_artifact_root: "gs://my-bucket/mlruns"
   serve_artifacts: true
+
+# Persistent Volume Claim configuration
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /mlflow-data
+  # Annotations for the PVC
+  annotations: {}
 
 # Inject environment variables from existing ConfigMaps or Secrets
 # sharedSecrets:
