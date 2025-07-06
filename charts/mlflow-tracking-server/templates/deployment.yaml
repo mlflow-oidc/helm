@@ -23,15 +23,10 @@ spec:
             - --host={{ default "0.0.0.0" $config.host }}
             - --port={{ default "8080" $config.port }}
             - --backend-store-uri={{ .Values.backend_store.db_uri }}
-            # - --artifacts-destination={{ .Values.artifact_store.default_artifact_root }}
-            - --default-artifact-root={{ .Values.artifact_store.default_artifact_root }}
+            - --artifacts-destination={{ .Values.artifact_store.default_artifact_root }}
+            # - --default-artifact-root={{ .Values.artifact_store.default_artifact_root }}
           {{- if .Values.artifact_store.serve_artifacts }}
             - --serve-artifacts
-          {{- end }}
-          {{- if .Values.persistence.enabled }}
-          volumeMounts:
-            - name: mlflow-storage
-              mountPath: {{ .Values.persistence.mountPath }}
           {{- end }}
           envFrom:
             - configMapRef:
@@ -39,10 +34,4 @@ spec:
             {{ include "common.envvar.shared.configs" . | indent 2 }}
             {{ include "common.envvar.shared.secrets" . | indent 2 }}
           {{ include "common.resources" . | nindent 10 }}
-      {{- if .Values.persistence.enabled }}
-      volumes:
-        - name: mlflow-storage
-          persistentVolumeClaim:
-            claimName: {{ include "common.fullname" . }}-storage
-      {{- end }}
 {{- end -}}
