@@ -63,8 +63,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ template "common.fullname" . }}
-            {{ include "common.envvar.shared.configs" . | indent 2 }}
-            {{ include "common.envvar.shared.secrets" . | indent 2 }}
+            {{ include "common.envvar.shared.configs" . | indent 12 }}
+            {{ include "common.envvar.shared.secrets" . | indent 12 }}
           {{ include "common.resources" . | nindent 10 }}
       {{- if .Values.persistence.enabled }}
       volumes:
