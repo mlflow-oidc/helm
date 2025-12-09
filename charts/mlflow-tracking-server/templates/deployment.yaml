@@ -2,6 +2,10 @@
 {{- define "application.deployment" -}}
 {{- $fullname := include "common.fullname" . -}}
 {{- $config := default (dict) .Values.config -}}
+{{- $persistence := default (dict) .Values.persistence -}}
+{{- $volumePermissions := default (dict) $persistence.volumePermissions -}}
+{{- $volumePermissionsEnabled := ternary $volumePermissions.enabled true (hasKey $volumePermissions "enabled") -}}
+{{- $volumePermissionsRunAsUser := ternary $volumePermissions.runAsUser 0 (hasKey $volumePermissions "runAsUser") -}}
 spec:
   template:
     spec:
@@ -10,6 +14,7 @@ spec:
         fsGroup: {{ .Values.persistence.fsGroup | default 1000 }}
         runAsUser: {{ .Values.persistence.runAsUser | default 1000 }}
         runAsGroup: {{ .Values.persistence.runAsGroup | default 1000 }}
+      {{- if $volumePermissionsEnabled }}
       initContainers:
         - name: volume-permissions
           image: busybox:1.35
@@ -20,10 +25,11 @@ spec:
               chown -R {{ .Values.persistence.runAsUser | default 1000 }}:{{ .Values.persistence.runAsGroup | default 1000 }} {{ .Values.persistence.mountPath }}
               chmod -R 755 {{ .Values.persistence.mountPath }}
           securityContext:
-            runAsUser: 0
+            runAsUser: {{ $volumePermissionsRunAsUser }}
           volumeMounts:
             - name: mlflow-storage
               mountPath: {{ .Values.persistence.mountPath }}
+      {{- end }}
       {{- end }}
       containers:
         - name: app

@@ -68,6 +68,9 @@ persistence:
   runAsGroup: 1000
   # Annotations for the PVC
   annotations: {}
+  volumePermissions:
+    enabled: true
+    runAsUser: 0
 
 # Inject environment variables from existing ConfigMaps or Secrets
 # sharedSecrets:
