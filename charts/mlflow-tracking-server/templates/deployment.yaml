@@ -33,6 +33,26 @@ spec:
             protocol: TCP
           image: "{{ default "ghcr.io/technicaldomain" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
           {{- if .Values.persistence.enabled }}
           securityContext:
             runAsUser: {{ .Values.persistence.runAsUser | default 1000 }}
