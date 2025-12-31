@@ -1,0 +1,8 @@
+{{- /*
+Create a PVC when persistence is enabled by reusing the common helper.
+*/ -}}
+{{- template "common.persistentvolumeclaim" (list . "mlflow-tracking-server.pvc") -}}
+{{- define "mlflow-tracking-server.pvc" -}}
+metadata:
+  name: {{ include "common.fullname" . }}-storage
+{{- end -}}
