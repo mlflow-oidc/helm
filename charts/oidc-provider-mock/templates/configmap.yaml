@@ -4,111 +4,507 @@ data:
   index.html: |
     <!doctype html>
     <html lang="en">
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-    />
-    <main style="padding-bottom: 6rem; padding-top: 2rem; padding-left: 6rem; padding-right: 2rem;">
-      <h3>OpenID Connect Provider Mock</h3>
-      <p>Please use user email address to log in.</p>
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <style>
+        :root {
+          --color-ui-bg: #f6f7f9;
+          --color-ui-card: #ffffff;
+          --color-ui-text: #11171c;
+          --color-ui-subtle: #5f7281;
+          --color-ui-border: #c0cdd8;
+          --color-btn-primary: #2272b4;
+          --color-btn-primary-hover: #0e538b;
+          --color-btn-secondary: rgba(34, 114, 180, 0.05);
+          --color-btn-secondary-border: #c0cdd8;
+          --color-accent: #2272b4;
+          --shadow-1: 0 10px 30px rgba(17, 23, 28, 0.08);
+          --radius-md: 14px;
+          --radius-sm: 10px;
+        }
 
-      <h4>Available Test Users</h4>
-      <ul>
-        {{- range .Values.config.users }}
-        <li>
-          <strong>{{ .name }} ({{ .username }})</strong>
-          <ul>
-            {{- range .groups }}
-            <li>{{ . }}</li>
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          margin: 0;
+          font-family: "Space Grotesk", "Helvetica Neue", sans-serif;
+          background: radial-gradient(circle at 20% 20%, rgba(34, 114, 180, 0.08), transparent 30%),
+            radial-gradient(circle at 80% 10%, rgba(14, 83, 139, 0.08), transparent 25%),
+            var(--color-ui-bg);
+          color: var(--color-ui-text);
+          min-height: 100vh;
+        }
+
+        .page {
+          max-width: 1100px;
+          margin: 0 auto;
+          padding: 48px 32px 72px;
+        }
+
+        header.hero {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 18px;
+          margin-bottom: 28px;
+        }
+
+        .title-stack h1 {
+          margin: 0 0 6px;
+          font-size: 28px;
+          letter-spacing: -0.02em;
+        }
+
+        .title-stack p {
+          margin: 0;
+          color: var(--color-ui-subtle);
+          font-size: 15px;
+        }
+
+        .pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 14px;
+          border: 1px solid var(--color-btn-secondary-border);
+          border-radius: 999px;
+          color: var(--color-ui-subtle);
+          background: var(--color-btn-secondary);
+          font-size: 13px;
+        }
+
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 20px;
+        }
+
+        .card {
+          background: var(--color-ui-card);
+          border: 1px solid var(--color-btn-secondary-border);
+          border-radius: var(--radius-md);
+          padding: 20px 22px;
+          box-shadow: var(--shadow-1);
+        }
+
+        .card h3 {
+          margin: 0 0 10px;
+          font-size: 18px;
+        }
+
+        .card p {
+          margin: 0 0 12px;
+          color: var(--color-ui-subtle);
+          font-size: 14px;
+        }
+
+        .users {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          margin: 14px 0 0;
+        }
+
+        .user-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          border: 1px solid var(--color-btn-secondary-border);
+          border-radius: var(--radius-sm);
+          padding: 12px 14px;
+          background: linear-gradient(135deg, rgba(34, 114, 180, 0.06), rgba(34, 114, 180, 0.01));
+        }
+
+        .user-meta strong {
+          font-size: 15px;
+        }
+
+        .tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 8px;
+          padding: 0;
+          list-style: none;
+        }
+
+        .tag {
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1px solid var(--color-btn-secondary-border);
+          background: #fff;
+          color: var(--color-ui-subtle);
+          font-size: 13px;
+        }
+
+        .btn {
+          border: 1px solid transparent;
+          border-radius: 10px;
+          padding: 10px 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          font-size: 14px;
+        }
+
+        .btn.primary {
+          background: var(--color-btn-primary);
+          color: #fff;
+          box-shadow: 0 6px 14px rgba(34, 114, 180, 0.25);
+        }
+
+        .btn.primary:hover {
+          background: var(--color-btn-primary-hover);
+          transform: translateY(-1px);
+        }
+
+        .btn.secondary {
+          background: var(--color-btn-secondary);
+          border-color: var(--color-btn-secondary-border);
+          color: var(--color-ui-text);
+        }
+
+        .btn.secondary:hover {
+          border-color: var(--color-btn-primary);
+          color: var(--color-btn-primary-hover);
+        }
+
+        footer {
+          margin-top: 28px;
+          padding: 12px 0 8px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          color: var(--color-ui-subtle);
+          font-size: 13px;
+        }
+
+        footer a {
+          color: var(--color-btn-primary);
+          text-decoration: none;
+          font-weight: 600;
+        }
+
+        footer a:hover {
+          color: var(--color-btn-primary-hover);
+        }
+      </style>
+    </head>
+    <body>
+      <div class="page">
+        <header class="hero">
+          <div class="title-stack">
+            <h1>OpenID Connect Provider Mock</h1>
+            <p>Use any of the test identities or paste a custom subject to authenticate.</p>
+          </div>
+          <span class="pill">Stable · Crafted for MLflow OIDC</span>
+        </header>
+
+        <div class="grid">
+          <section class="card">
+            <h3>How it works</h3>
+            <p>Pick a user below or supply an email on the authorize screen. Groups are embedded as claims.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <a class="btn primary" href="/oauth2/authorize">Client Authorization</a>
+              <a class="btn secondary" href="/.well-known/openid-configuration">OpenID Discovery</a>
+            </div>
+          </section>
+
+          <section class="card">
+            <h3>Self login</h3>
+            <p>Skip the client and issue an ID token with a custom subject.</p>
+            <a class="btn secondary" href="/oidc/login">Open self-login</a>
+          </section>
+        </div>
+
+        <section class="card" style="margin-top: 22px;">
+          <h3>Available Test Users</h3>
+          <p>Predefined users with helpful group claims.</p>
+          <div class="users">
+            {{- range .Values.config.users }}
+            <div class="user-row">
+              <div class="user-meta">
+                <strong>{{ .name }} ({{ .username }})</strong>
+                <ul class="tags">
+                  {{- range .groups }}
+                  <li class="tag">{{ . }}</li>
+                  {{- end }}
+                </ul>
+              </div>
+              <a class="btn primary" href="/oauth2/authorize?sub={{ .username }}">Use</a>
+            </div>
             {{- end }}
-          </ul>
-        </li>
-        {{- end }}
-      </ul>
-    </main>
-    <footer style="position: fixed; bottom: 0; width: 100%; background-color: white;">
-      <hr />
-      <ul style="display: flex; justify-content: space-around; list-style: none; padding: 0;">
-        <li>
-          <a href="https://github.com/mlflow-oidc/oidc-provider-mock-docker" target="_blank">
-            Docker Image
-          </a>
-        </li>
-        <li>
-          <a href="https://github.com/mlflow-oidc/helm" target="_blank">
-            Helm Chart
-          </a>
-        </li>
-        <li>
-          <a href="https://github.com/geigerzaehler/oidc-provider-mock" target="_blank">
-            Project
-          </a>
-        </li>
-        <li>
-          <a href="/.well-known/openid-configuration">
-            OpenID Discovery
-          </a>
-        </li>
-        <li>
-          <a href="/oauth2/authorize">
-            Client Authorization
-          </a>
-        </li>
-        <li>
-          <a href="/oidc/login">
-            Self Login
-          </a>
-        </li>
-      </ul>
-    </footer>
+          </div>
+        </section>
+
+        <footer>
+          <span>Resources:</span>
+          <a href="https://github.com/mlflow-oidc/oidc-provider-mock-docker" target="_blank">Docker image</a>
+          <a href="https://github.com/mlflow-oidc/helm" target="_blank">Helm chart</a>
+          <a href="https://github.com/geigerzaehler/oidc-provider-mock" target="_blank">Upstream project</a>
+        </footer>
+      </div>
+    </body>
     </html>
 
   authorization_form.html: |
     {% extends "_base.html" %}
     {% block content %}
-    <h1>Authorize Client</h1>
-    <p>Client ID: <code>{{ "{{ client_id }}" }}</code></p>
-    <form method="post" id="authForm">
-    {% if sub_missing %}
-    <input
-        type="text"
-        name="sub"
-        placeholder="sub"
-        required
-        autofocus
-        aria-invalid="true"
-        aria-describedby="sub-missing"
-        id="subInput"
-    />
-    <small id="sub-missing">The field is missing</small>
-    {% else %}
-    <input type="text" name="sub" placeholder="sub" required autofocus id="subInput" />
-    {% endif %}
-    <button type="submit">Authorize</button>
-    </form>
-    <form method="post">
-    <button type="submit" name="action" value="deny">Deny</button>
-    </form>
-    <p>You will be redirected to {{ "{{ redirect_uri }}" }}</p>
-    <h4>Available Test Users</h4>
-    <ul>
-      {{- range .Values.config.users }}
-      <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+      :root {
+        --color-ui-bg: #f6f7f9;
+        --color-ui-card: #ffffff;
+        --color-ui-text: #11171c;
+        --color-ui-subtle: #5f7281;
+        --color-ui-border: #c0cdd8;
+        --color-btn-primary: #2272b4;
+        --color-btn-primary-hover: #0e538b;
+        --color-btn-secondary: rgba(34, 114, 180, 0.04);
+        --color-btn-secondary-border: #c0cdd8;
+        --shadow-1: 0 10px 30px rgba(17, 23, 28, 0.08);
+        --radius-md: 14px;
+        --radius-sm: 10px;
+      }
+
+      body {
+        font-family: "Space Grotesk", "Helvetica Neue", sans-serif;
+        background: radial-gradient(circle at 20% 20%, rgba(34, 114, 180, 0.08), transparent 30%),
+          radial-gradient(circle at 80% 10%, rgba(14, 83, 139, 0.08), transparent 25%),
+          var(--color-ui-bg);
+        color: var(--color-ui-text);
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      .page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 28px 68px;
+      }
+
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+
+      .hero .hint {
+        margin: 4px 0 0;
+        color: var(--color-ui-subtle);
+        font-size: 14px;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--color-btn-secondary-border);
+        background: var(--color-btn-secondary);
+        font-size: 13px;
+        color: var(--color-ui-subtle);
+      }
+
+      .card {
+        background: var(--color-ui-card);
+        border: 1px solid var(--color-btn-secondary-border);
+        border-radius: var(--radius-md);
+        padding: 22px;
+        box-shadow: var(--shadow-1);
+        margin-bottom: 18px;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .input-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--color-btn-secondary-border);
+        font-size: 15px;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        background: #fff;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--color-btn-primary);
+        box-shadow: 0 0 0 3px rgba(34, 114, 180, 0.15);
+      }
+
+      .error-text {
+        color: #c53030;
+        font-size: 13px;
+      }
+
+      .meta {
+        color: var(--color-ui-subtle);
+        font-size: 14px;
+        margin: 10px 0 0;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        border: 1px solid transparent;
+        border-radius: 10px;
+        padding: 11px 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.18s ease;
+        font-size: 14px;
+      }
+
+      .btn.primary {
+        background: var(--color-btn-primary);
+        color: #fff;
+        box-shadow: 0 6px 14px rgba(34, 114, 180, 0.25);
+      }
+
+      .btn.primary:hover {
+        background: var(--color-btn-primary-hover);
+        transform: translateY(-1px);
+      }
+
+      .btn.ghost {
+        background: var(--color-btn-secondary);
+        border-color: var(--color-btn-secondary-border);
+        color: var(--color-ui-text);
+      }
+
+      .btn.ghost:hover {
+        border-color: var(--color-btn-primary);
+        color: var(--color-btn-primary-hover);
+      }
+
+      .users {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .user-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        border: 1px solid var(--color-btn-secondary-border);
+        border-radius: var(--radius-sm);
+        padding: 12px 14px;
+        background: linear-gradient(135deg, rgba(34, 114, 180, 0.06), rgba(34, 114, 180, 0.01));
+      }
+
+      .user-meta strong {
+        font-size: 15px;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .tag {
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--color-btn-secondary-border);
+        background: #fff;
+        color: var(--color-ui-subtle);
+        font-size: 13px;
+      }
+    </style>
+
+    <div class="page">
+      <div class="hero">
         <div>
-          <strong>{{ .name }} ({{ .username }})</strong>
-          <ul style="margin-top: 0.5rem;">
-            {{- range .groups }}
-            <li>{{ . }}</li>
-            {{- end }}
-          </ul>
+          <h1>Authorize Client</h1>
+          <p class="hint">Client ID: <code>{{ "{{ client_id }}" }}</code></p>
         </div>
-        <button type="button" onclick="loginAs('{{ .username }}')" style="margin-left: 1rem; padding: 0.5rem 1rem; border: 1px solid #ccc; background: #f8f9fa; cursor: pointer; border-radius: 4px;">
-          🔑 Login as
-        </button>
-      </li>
-      {{- end }}
-    </ul>
-    
+        <span class="pill">Redirects to {{ "{{ redirect_uri }}" }}</span>
+      </div>
+
+      <section class="card">
+        <form method="post" id="authForm">
+          <label for="subInput">Subject (user email)</label>
+          <div class="input-wrap">
+          {% if sub_missing %}
+            <input
+              type="text"
+              name="sub"
+              placeholder="alice@example.com"
+              required
+              autofocus
+              aria-invalid="true"
+              aria-describedby="sub-missing"
+              id="subInput"
+            />
+            <span class="error-text" id="sub-missing">Subject is required</span>
+          {% else %}
+            <input type="text" name="sub" placeholder="alice@example.com" required autofocus id="subInput" />
+          {% endif %}
+          </div>
+          <p class="meta">You will be redirected to {{ "{{ redirect_uri }}" }} after authorization.</p>
+          <div class="actions">
+            <button class="btn primary" type="submit">Authorize</button>
+            <button class="btn ghost" type="submit" name="action" value="deny">Deny</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h4 style="margin: 0 0 8px;">Available Test Users</h4>
+        <p class="meta" style="margin-top: 0;">Choose a subject and we will prefill the form.</p>
+        <div class="users">
+          {{- range .Values.config.users }}
+          <div class="user-row">
+            <div class="user-meta">
+              <strong>{{ .name }} ({{ .username }})</strong>
+              <ul class="tags">
+                {{- range .groups }}
+                <li class="tag">{{ . }}</li>
+                {{- end }}
+              </ul>
+            </div>
+            <button type="button" class="btn primary" onclick="loginAs('{{ .username }}')">Use</button>
+          </div>
+          {{- end }}
+        </div>
+      </section>
+    </div>
+
     <script>
     function loginAs(username) {
       document.getElementById('subInput').value = username;
