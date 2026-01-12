@@ -179,6 +179,27 @@ entries:
   oidc-provider-mock:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-01-12T18:11:21.891587497Z"
+    dependencies:
+    - name: common
+      repository: https://technicaldomain.github.io/helm/
+      version: 2.1.4
+    description: A Helm chart for Dockerized Mock OpenID Provider
+    digest: 43a8cf14f8e7bafa062646f043b671397fa82122f9013079e37cad48a7bf51c9
+    home: https://github.com/mlflow-oidc/helm
+    maintainers:
+    - email: alex@kharkevich.org
+      name: Alexander Kharkevich
+    name: oidc-provider-mock
+    sources:
+    - https://github.com/mlflow-oidc/helm
+    - https://github.com/mlflow-oidc/oidc-provider-mock-docker
+    type: application
+    urls:
+    - https://github.com/mlflow-oidc/helm/releases/download/oidc-provider-mock-1.2.3/oidc-provider-mock-1.2.3.tgz
+    version: 1.2.3
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2026-01-12T17:43:19.39034626Z"
     dependencies:
     - name: common
@@ -429,4 +450,4 @@ entries:
     urls:
     - https://github.com/mlflow-oidc/helm/releases/download/oidc-provider-mock-1.0.1/oidc-provider-mock-1.0.1.tgz
     version: 1.0.1
-generated: "2026-01-12T17:43:19.390411731Z"
+generated: "2026-01-12T18:11:21.891671553Z"
