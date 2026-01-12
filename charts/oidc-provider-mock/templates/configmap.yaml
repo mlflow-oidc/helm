@@ -136,6 +136,7 @@ data:
         }
 
         .tag {
+          list-style: none;
           padding: 6px 10px;
           border-radius: 999px;
           border: 1px solid var(--color-btn-secondary-border);
@@ -438,6 +439,7 @@ data:
       }
 
       .tag {
+        list-style: none;
         padding: 6px 10px;
         border-radius: 999px;
         border: 1px solid var(--color-btn-secondary-border);
