@@ -69,6 +69,9 @@ spec:
             - name: static-files
               mountPath: {{ .Values.static.authorization_form }}
               subPath: authorization_form.html
+      {{- with .Values.extraContainers }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       volumes:
         - name: static-files
           configMap:

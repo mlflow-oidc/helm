@@ -85,3 +85,14 @@ config: {}
 #   data:
 #     key: value
 #     key2: value2
+
+# Extra containers to run as sidecars
+extraContainers: []
+# Example:
+# - name: sidecar-container
+#   image: nginx:latest
+#   ports:
+#     - containerPort: 8081
+#   volumeMounts:
+#     - name: shared-data
+#       mountPath: /data
