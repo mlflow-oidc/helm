@@ -72,6 +72,9 @@ spec:
             {{ include "common.envvar.shared.configs" . | indent 12 }}
             {{ include "common.envvar.shared.secrets" . | indent 12 }}
           {{ include "common.resources" . | nindent 10 }}
+      {{- with .Values.extraContainers }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.persistence.enabled }}
       volumes:
         - name: mlflow-storage

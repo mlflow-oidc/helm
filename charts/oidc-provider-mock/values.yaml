@@ -47,3 +47,14 @@ config:
     #   name: Frank
     #   groups:
     #     - mlflow-admin
+
+# Extra containers to run as sidecars
+extraContainers: []
+# Example:
+# - name: sidecar-container
+#   image: nginx:latest
+#   ports:
+#     - containerPort: 8081
+#   volumeMounts:
+#     - name: shared-data
+#       mountPath: /data
