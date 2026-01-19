@@ -56,9 +56,9 @@ spec:
             - --app-name
             - oidc-auth
           {{- if eq $healthCheck.enabled true }}
-          {{ include "common.healthcheck.liveness" . }}
-          {{ include "common.healthcheck.readiness" . }}
-          {{ include "common.healthcheck.startup" . }}
+          {{ include "common.healthcheck.liveness" . | nindent 10 }}
+          {{ include "common.healthcheck.readiness" . | nindent 10 }}
+          {{ include "common.healthcheck.startup" . | nindent 10 }}
           {{- end }}
           env:
             {{- /* Enable Kubernetes secrets provider when mounting secrets as files */}}
