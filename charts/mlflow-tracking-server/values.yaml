@@ -154,3 +154,12 @@ persistence:
 # sharedSecrets:
 #   - secret-1
 #   - secret-2
+
+healthCheck:
+  enabled: true
+  liveness:
+    path: health/live
+  readiness:
+    path: health/ready
+  startup:
+    path: health/ready
