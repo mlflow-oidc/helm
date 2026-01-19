@@ -1,87 +1,156 @@
 replicaCount: 1
 
 image:
+  # pullSecretsEnabled: true
   registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
   tag: latest
+  pullPolicy: IfNotPresent
 
-oidc:
-  enabled: true
-  app_name: "oidc-auth"
-  secret_key: "definme"
-  redirect_uri: "https://mlflow.technicaldomain.xyz/callback"
-  discovery_url: "https://oidc-mock.technicaldomain.xyz/.well-known/openid-configuration"
-  client_secret: "definme"
-  client_id: "definme"
-  provider_type: "oidc"
-  provider_display_name: "Sign in with Demo OIDC Provider"
-  scope: "openid,profile,email,groups"
-  group_name: "mlflow-access"
-  admin_group_name: "mlflow-admin"
-  default_mlflow_permission: MANAGE
-  session_type: "filesystem"
-  users_db_uri: "sqlite:///mlflow_users.db"
-  # users_db_uri: "postgresql+psycopg2://$(MLFLOW_AUTH_DB_USERNAME):$(MLFLOW_AUTH_DB_PASSWORD)@$(MLFLOW_AUTH_DB_HOST):$(MLFLOW_AUTH_DB_PORT)/$(MLFLOW_AUTH_DB_DATABASE)"
-  # session_type: "redis"
-  # redis_host: "localhost"
-  # redis_port: 6379
-  # MS Entra ID group detection plugin
-  # group_detection_plugin: "mlflow_oidc_auth.plugins.group_detection_microsoft_entra_id"
+# Static configuration for MLflow and mlflow-oidc-auth
+# All values here are rendered into a ConfigMap
+config:
+  data:
+    # =================================================================
+    # MLflow Server Configuration
+    # =================================================================
+    # Host to bind (0.0.0.0 for all interfaces)
+    MLFLOW_HOST: "0.0.0.0"
+    # Port to listen on
+    MLFLOW_PORT: "8080"
+    # Number of worker processes
+    # MLFLOW_WORKERS: "4"
+
+    # Artifact configuration
+    # Default artifact root for new experiments (use mlflow-artifacts:/ for proxy mode)
+    MLFLOW_DEFAULT_ARTIFACT_ROOT: "mlflow-artifacts:/"
+    # Enable artifact serving through MLflow proxy
+    MLFLOW_SERVE_ARTIFACTS: "true"
+    # Artifacts destination (where artifacts are actually stored)
+    # Local:  /mlflow-data
+    # S3:     s3://bucket-name/path
+    # Azure:  wasbs://container@storage.blob.core.windows.net/path
+    # GCS:    gs://bucket-name/path
+    # MinIO:  s3://bucket-name/path (with AWS_ENDPOINT_URL env var)
+    MLFLOW_ARTIFACTS_DESTINATION: "/mlflow-data"
+
+    # Optional: Registry store URI (defaults to backend-store-uri)
+    # MLFLOW_REGISTRY_STORE_URI: ""
+
+    # =================================================================
+    # OIDC Provider Configuration
+    # =================================================================
+    # Required: OIDC discovery endpoint
+    OIDC_DISCOVERY_URL: "https://your-oidc-provider/.well-known/openid-configuration"
+    # Login button display text
+    OIDC_PROVIDER_DISPLAY_NAME: "Sign in with OIDC"
+    # OAuth scopes to request (comma-separated)
+    OIDC_SCOPE: "openid,profile,email,groups"
+    # Token attribute containing group claims
+    OIDC_GROUPS_ATTRIBUTE: "groups"
+    # Optional: Explicit redirect URI (auto-detected if not set)
+    # OIDC_REDIRECT_URI: "https://mlflow.example.com/callback"
+
+    # =================================================================
+    # Authorization Configuration
+    # =================================================================
+    # Groups allowed to access MLflow (comma-separated or list)
+    OIDC_GROUP_NAME: "mlflow-users"
+    # Groups with admin privileges (comma-separated or list)
+    OIDC_ADMIN_GROUP_NAME: "mlflow-admins"
+    # Default permission for new resources: NO_PERMISSIONS, READ, EDIT, MANAGE
+    DEFAULT_MLFLOW_PERMISSION: "MANAGE"
+    # Optional: Permission source order (comma-separated)
+    # PERMISSION_SOURCE_ORDER: "user,group,regex,group-regex"
+    # Optional: Custom group detection plugin
+    # OIDC_GROUP_DETECTION_PLUGIN: "mlflow_oidc_auth.plugins.group_detection_microsoft_entra_id"
+
+    # =================================================================
+    # UI Configuration
+    # =================================================================
+    # Extend MLflow menu with OIDC auth items
+    EXTEND_MLFLOW_MENU: "true"
+    # Show permissions page as landing page
+    DEFAULT_LANDING_PAGE_IS_PERMISSIONS: "true"
+    # Automatically redirect to OIDC login
+    AUTOMATIC_LOGIN_REDIRECT: "false"
+
+    # =================================================================
+    # Database Migration
+    # =================================================================
+    # Alembic version table name (for schema migrations)
+    OIDC_ALEMBIC_VERSION_TABLE: "alembic_version"
+
+    # =================================================================
+    # Logging
+    # =================================================================
+    LOG_LEVEL: "INFO"
+
+# -----------------------------------------------------------------
+# Secrets Configuration
+# -----------------------------------------------------------------
+# Secrets must be managed externally (not by this chart)
+# See README.md for example secret manifests
+secrets:
+  # Name of existing Kubernetes Secret containing sensitive values
+  # Required secrets:
+  #   - SECRET_KEY: Session signing key
+  #   - OIDC_CLIENT_ID: OAuth client identifier
+  #   - OIDC_CLIENT_SECRET: OAuth client secret
+  #   - OIDC_USERS_DB_URI: Auth database connection string
+  #   - MLFLOW_BACKEND_STORE_URI: MLflow tracking database URI
+  externalSecretName: ""
+
+  # Mount secrets as files for Kubernetes secrets provider
+  # When enabled, mlflow-oidc-auth reads secrets from mounted files
+  # instead of environment variables
+  mountAsFiles:
+    enabled: false
+    # Path where secrets are mounted (must match CONFIG_K8S_SECRETS_PATH)
+    path: "/var/run/secrets/mlflow-oidc-auth"
+
+# -----------------------------------------------------------------
+# Service Account Configuration
+# -----------------------------------------------------------------
 serviceAccount:
   create: false
   annotations: {}
-    # For example, to use eks service account annotation
-    # https://docs.aws.amazon.com/eks/latest/userguide/pod-configuration.html
-    # eks.amazonaws.com/role-arn: ""
-  # name: my-service-account-custom-name
+    # AWS EKS service account annotation example:
+    # eks.amazonaws.com/role-arn: "arn:aws:iam::123456789:role/mlflow-role"
+    # Azure Workload Identity annotation example:
+    # azure.workload.identity/client-id: "00000000-0000-0000-0000-000000000000"
+  # Custom service account name (defaults to release name)
+  # name: ""
 
-backend_store:
-  db_uri: "sqlite:///:memory"
-  # Postgres backend example
-  # db_uri: "postgresql+psycopg2://username:password@host:port/database"
-  # MySQL backend example
-  # db_uri: "mysql+pymysql://username:password@host:port/database"
-  # Generic backend example
-  # db_uri: "$(DB_TYPE)+$(DB_DRIVER)://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_DATABASE)"
-
-artifact_store:
-  # Local filesystem example
-  default_artifact_root: "/mlflow-data"
-  # AWS S3 example
-  # default_artifact_root: "s3://my-bucket/mlruns"
-  # Azure Blob Storage example
-  # default_artifact_root: "wasbs://<container>@<storage-account>.blob.core.windows.net/<path>"
-  # Google Cloud Storage example
-  # default_artifact_root: "gs://my-bucket/mlruns"
-  serve_artifacts: true
-
-# Persistent Volume Claim configuration
+# -----------------------------------------------------------------
+# Persistent Volume Configuration
+# -----------------------------------------------------------------
+# Only needed for local artifact storage
 persistence:
   enabled: false
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 10Gi
   mountPath: /mlflow-data
-  # User and group IDs for the volume
+  # Security context
   fsGroup: 1000
   runAsUser: 1000
   runAsGroup: 1000
-  # Annotations for the PVC
   annotations: {}
+  # Init container to set volume permissions
   volumePermissions:
     enabled: true
     runAsUser: 0
 
-# Inject environment variables from existing ConfigMaps or Secrets
-# sharedSecrets:
-#   - secret-1
-#   - secret-2
+# -----------------------------------------------------------------
+# Additional ConfigMaps/Secrets to Mount
+# -----------------------------------------------------------------
+# Inject env vars from additional existing ConfigMaps
 # sharedConfigs:
 #   - config-1
 #   - config-2
 
-# additional environment variables
-config: {}
-#   data:
-#     key: value
-#     key2: value2
+# Inject env vars from additional existing Secrets
+# sharedSecrets:
+#   - secret-1
+#   - secret-2

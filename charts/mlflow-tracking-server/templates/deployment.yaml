@@ -2,7 +2,10 @@
 {{- define "application.deployment" -}}
 {{- $fullname := include "common.fullname" . -}}
 {{- $config := default (dict) .Values.config -}}
+{{- $configData := default (dict) $config.data -}}
 {{- $persistence := default (dict) .Values.persistence -}}
+{{- $secrets := default (dict) .Values.secrets -}}
+{{- $mountAsFiles := default (dict) $secrets.mountAsFiles -}}
 {{- $volumePermissions := default (dict) $persistence.volumePermissions -}}
 {{- $volumePermissionsEnabled := ternary $volumePermissions.enabled true (hasKey $volumePermissions "enabled") -}}
 {{- $volumePermissionsRunAsUser := ternary $volumePermissions.runAsUser 0 (hasKey $volumePermissions "runAsUser") -}}
@@ -34,10 +37,10 @@ spec:
       containers:
         - name: app
           ports:
-          - name: {{ default "http" $config.applicationName }}
-            containerPort: {{ default "8080" $config.port }}
+          - name: http
+            containerPort: {{ $configData.MLFLOW_PORT | default 8080 }}
             protocol: TCP
-          image: "{{ default "ghcr.io/technicaldomain" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
           {{- if .Values.persistence.enabled }}
           securityContext:
@@ -49,33 +52,64 @@ spec:
           command: ["mlflow"]
           args:
             - server
-          {{- if .Values.oidc.enabled }}
             - --app-name
-            - {{ .Values.oidc.app_name }}
-          {{- end }}
-            - --host={{ default "0.0.0.0" $config.host }}
-            - --port={{ default "8080" $config.port }}
-            - --backend-store-uri={{ .Values.backend_store.db_uri }}
-            - --artifacts-destination={{ .Values.artifact_store.default_artifact_root }}
-            # - --default-artifact-root={{ .Values.artifact_store.default_artifact_root }}
-          {{- if .Values.artifact_store.serve_artifacts }}
-            - --serve-artifacts
-          {{- end }}
-          {{- if .Values.persistence.enabled }}
+            - oidc-auth
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+            {{- /* Enable Kubernetes secrets provider when mounting secrets as files */}}
+            {{- if $mountAsFiles.enabled }}
+            - name: CONFIG_K8S_SECRETS_ENABLED
+              value: "true"
+            - name: CONFIG_K8S_SECRETS_PATH
+              value: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" | quote }}
+            {{- end }}
           volumeMounts:
+            {{- if .Values.persistence.enabled }}
             - name: mlflow-storage
               mountPath: {{ .Values.persistence.mountPath }}
-          {{- end }}
+            {{- end }}
+            {{- /* Mount secrets as files for K8s secrets provider */}}
+            {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
+            - name: mlflow-secrets
+              mountPath: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" }}
+              readOnly: true
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ template "common.fullname" . }}
+            {{- /* Reference external secret as environment variables (when not mounting as files) */}}
+            {{- if and $secrets.externalSecretName (not $mountAsFiles.enabled) }}
+            - secretRef:
+                name: {{ $secrets.externalSecretName }}
+            {{- end }}
             {{ include "common.envvar.shared.configs" . | indent 12 }}
             {{ include "common.envvar.shared.secrets" . | indent 12 }}
           {{ include "common.resources" . | nindent 10 }}
-      {{- if .Values.persistence.enabled }}
       volumes:
+        {{- if .Values.persistence.enabled }}
         - name: mlflow-storage
           persistentVolumeClaim:
             claimName: {{ include "common.fullname" . }}-storage
-      {{- end }}
+        {{- end }}
+        {{- /* Secret volume for K8s secrets provider */}}
+        {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
+        - name: mlflow-secrets
+          secret:
+            secretName: {{ $secrets.externalSecretName }}
+        {{- end }}
 {{- end -}}
