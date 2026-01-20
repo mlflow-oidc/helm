@@ -1,4 +1,10 @@
-replicaCount: 1
+replicas: 1
+
+hpa:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
 
 image:
   # pullSecretsEnabled: true
@@ -123,26 +129,6 @@ serviceAccount:
   # name: ""
 
 # -----------------------------------------------------------------
-# Persistent Volume Configuration
-# -----------------------------------------------------------------
-# Only needed for local artifact storage
-persistence:
-  enabled: false
-  storageClass: ""
-  accessMode: ReadWriteOnce
-  size: 10Gi
-  mountPath: /mlflow-data
-  # Security context
-  fsGroup: 1000
-  runAsUser: 1000
-  runAsGroup: 1000
-  annotations: {}
-  # Init container to set volume permissions
-  volumePermissions:
-    enabled: true
-    runAsUser: 0
-
-# -----------------------------------------------------------------
 # Additional ConfigMaps/Secrets to Mount
 # -----------------------------------------------------------------
 # Inject env vars from additional existing ConfigMaps
@@ -163,3 +149,8 @@ healthCheck:
     path: health/ready
   startup:
     path: health/ready
+
+securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000

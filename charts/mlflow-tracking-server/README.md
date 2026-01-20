@@ -8,7 +8,7 @@ Deploy MLflow Tracking Server with OIDC authentication using [mlflow-oidc-auth](
 - **Flexible Secrets Management** - External secrets with multiple provider options
 - **Kubernetes Secrets Provider** - Native support for mounted K8s secrets
 - **Cloud Provider Support** - AWS Secrets Manager, Azure Key Vault, HashiCorp Vault
-- **Artifact Storage** - Local, S3, Azure Blob, GCS support
+- **Artifact Storage** - S3, Azure Blob, GCS support
 - **Health Endpoints** - Built-in liveness (`/health/live`) and readiness (`/health/ready`) probes
 
 ---
@@ -59,7 +59,7 @@ helm install mlflow ./charts/mlflow-tracking-server \
 | `MLFLOW_REGISTRY_STORE_URI` | Model registry database (optional) | Same as backend |
 
 > [!NOTE]
-> When `MLFLOW_SERVE_ARTIFACTS=true`, artifacts are proxied through MLflow. Set `MLFLOW_DEFAULT_ARTIFACT_ROOT=mlflow-artifacts:/` and configure `MLFLOW_ARTIFACTS_DESTINATION` to your actual storage (S3, Azure, GCS, local path).
+> When `MLFLOW_SERVE_ARTIFACTS=true`, artifacts are proxied through MLflow. Set `MLFLOW_DEFAULT_ARTIFACT_ROOT=mlflow-artifacts:/` and configure `MLFLOW_ARTIFACTS_DESTINATION` to your actual storage (S3, Azure, GCS).
 
 ### OIDC Authentication (`config.data`)
 
@@ -234,21 +234,6 @@ config:
 
 ## Artifact Storage Examples
 
-### Local Storage (with persistence)
-
-```yaml
-config:
-  data:
-    MLFLOW_DEFAULT_ARTIFACT_ROOT: "mlflow-artifacts:/"
-    MLFLOW_SERVE_ARTIFACTS: "true"
-    MLFLOW_ARTIFACTS_DESTINATION: "/mlflow-data"
-
-persistence:
-  enabled: true
-  size: 50Gi
-  storageClass: "standard"
-```
-
 ### S3-Compatible Storage
 
 ```yaml
@@ -279,7 +264,7 @@ config:
 ## Complete Example
 
 ```yaml
-replicaCount: 2
+replicas: 2
 
 image:
   registry: ghcr.io/mlflow-oidc
@@ -318,58 +303,6 @@ serviceAccount:
   annotations:
     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789:role/mlflow-s3-access"
 ```
-
----
-
-## Helm Commands
-
-```bash
-# Lint
-helm lint ./charts/mlflow-tracking-server
-
-# Template preview
-helm template mlflow ./charts/mlflow-tracking-server -f values.yaml
-
-# Install
-helm install mlflow ./charts/mlflow-tracking-server -f values.yaml
-
-# Upgrade
-helm upgrade mlflow ./charts/mlflow-tracking-server -f values.yaml
-
-# Uninstall
-helm uninstall mlflow
-```
-
----
-
-## Troubleshooting
-
-### Pod fails to start
-
-1. Check if secret exists: `kubectl get secret mlflow-secrets`
-2. Verify all required keys are present
-3. Check pod logs: `kubectl logs -l app.kubernetes.io/name=mlflow-tracking-server`
-
-### OIDC authentication fails
-
-1. Verify `OIDC_DISCOVERY_URL` is accessible from the cluster
-2. Check `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` match your provider
-3. Ensure redirect URI is correctly configured in your OIDC provider
-
-### Database connection errors
-
-1. Verify `OIDC_USERS_DB_URI` and `MLFLOW_BACKEND_STORE_URI` are correct
-2. Check network policies allow database access
-3. Verify database credentials
-
----
-
-## References
-
-- [mlflow-oidc-auth Documentation](https://github.com/mlflow-oidc/mlflow-oidc-auth)
-- [Config Providers](https://github.com/mlflow-oidc/mlflow-oidc-auth/tree/main/mlflow_oidc_auth/config_providers)
-- [MLflow CLI Reference](https://mlflow.org/docs/latest/api_reference/cli.html#mlflow-server)
-- [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
 
 ---
 

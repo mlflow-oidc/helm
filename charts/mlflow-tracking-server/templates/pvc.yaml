@@ -1,8 +1,5 @@
-{{- /*
-Create a PVC when persistence is enabled by reusing the common helper.
-*/ -}}
-{{- template "common.persistentvolumeclaim" (list . "mlflow-tracking-server.pvc") -}}
-{{- define "mlflow-tracking-server.pvc" -}}
-metadata:
-  name: {{ include "common.fullname" . }}-storage
-{{- end -}}
+{{- /* Local persistent volume (PVC) support removed.
+   This chart no longer creates or manages a PVC. Use remote
+   artifact stores (S3/GCS/Azure) by setting
+   `config.data.MLFLOW_ARTIFACTS_DESTINATION` accordingly. */ -}}
+

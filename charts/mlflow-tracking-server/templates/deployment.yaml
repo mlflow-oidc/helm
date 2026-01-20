@@ -13,28 +13,6 @@
 spec:
   template:
     spec:
-      {{- if .Values.persistence.enabled }}
-      securityContext:
-        fsGroup: {{ .Values.persistence.fsGroup | default 1000 }}
-        runAsUser: {{ .Values.persistence.runAsUser | default 1000 }}
-        runAsGroup: {{ .Values.persistence.runAsGroup | default 1000 }}
-      {{- if $volumePermissionsEnabled }}
-      initContainers:
-        - name: volume-permissions
-          image: busybox:1.35
-          command: ['sh', '-c']
-          args:
-            - |
-              mkdir -p {{ .Values.persistence.mountPath }}/mlruns
-              chown -R {{ .Values.persistence.runAsUser | default 1000 }}:{{ .Values.persistence.runAsGroup | default 1000 }} {{ .Values.persistence.mountPath }}
-              chmod -R 755 {{ .Values.persistence.mountPath }}
-          securityContext:
-            runAsUser: {{ $volumePermissionsRunAsUser }}
-          volumeMounts:
-            - name: mlflow-storage
-              mountPath: {{ .Values.persistence.mountPath }}
-      {{- end }}
-      {{- end }}
       containers:
         - name: app
           ports:
@@ -43,13 +21,6 @@ spec:
             protocol: TCP
           image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
-          {{- if .Values.persistence.enabled }}
-          securityContext:
-            runAsUser: {{ .Values.persistence.runAsUser | default 1000 }}
-            runAsGroup: {{ .Values.persistence.runAsGroup | default 1000 }}
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
-          {{- end }}
           command: ["mlflow"]
           args:
             - server
@@ -69,10 +40,6 @@ spec:
               value: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" | quote }}
             {{- end }}
           volumeMounts:
-            {{- if .Values.persistence.enabled }}
-            - name: mlflow-storage
-              mountPath: {{ .Values.persistence.mountPath }}
-            {{- end }}
             {{- /* Mount secrets as files for K8s secrets provider */}}
             {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
             - name: mlflow-secrets
@@ -91,11 +58,6 @@ spec:
             {{ include "common.envvar.shared.secrets" . | indent 12 }}
           {{ include "common.resources" . | nindent 10 }}
       volumes:
-        {{- if .Values.persistence.enabled }}
-        - name: mlflow-storage
-          persistentVolumeClaim:
-            claimName: {{ include "common.fullname" . }}-storage
-        {{- end }}
         {{- /* Secret volume for K8s secrets provider */}}
         {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
         - name: mlflow-secrets
