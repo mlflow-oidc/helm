@@ -1,5 +1,27 @@
 apiVersion: v1
 entries:
+  echo-service:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-01-20T04:39:00.056012214Z"
+    dependencies:
+    - name: common
+      repository: https://technicaldomain.github.io/helm/
+      version: 2.1.5
+    description: A Helm chart for Echo Service
+    digest: 2608744d4f76445476ec52368b8e16fe892cf2269fe72c495b22cf63d548a0d1
+    home: https://github.com/mlflow-oidc/helm
+    maintainers:
+    - email: alex@kharkevich.org
+      name: Alexander Kharkevich
+    name: echo-service
+    sources:
+    - https://github.com/mlflow-oidc/helm
+    - https://github.com/mlflow-oidc/echo-service
+    type: application
+    urls:
+    - https://github.com/mlflow-oidc/helm/releases/download/echo-service-1.0.0/echo-service-1.0.0.tgz
+    version: 1.0.0
   mlflow-tracking-server:
   - apiVersion: v2
     appVersion: 6.3.0
@@ -559,4 +581,4 @@ entries:
     urls:
     - https://github.com/mlflow-oidc/helm/releases/download/oidc-provider-mock-1.0.1/oidc-provider-mock-1.0.1.tgz
     version: 1.0.1
-generated: "2026-01-20T01:07:52.554166261Z"
+generated: "2026-01-20T04:39:00.056081558Z"
