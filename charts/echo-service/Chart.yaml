@@ -1,0 +1,18 @@
+apiVersion: v2
+name: echo-service
+description: A Helm chart for Echo Service
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/mlflow-oidc/helm
+sources:
+  - https://github.com/mlflow-oidc/helm
+  - https://github.com/mlflow-oidc/echo-service
+maintainers:
+  - email: alex@kharkevich.org
+    name: Alexander Kharkevich
+
+dependencies:
+  - name: common
+    repository: https://technicaldomain.github.io/helm/
+    version: 2.1.5
