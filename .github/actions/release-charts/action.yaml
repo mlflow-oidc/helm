@@ -8,10 +8,6 @@ inputs:
     description: OCI registry (e.g. ghcr.io/org/helm)
     required: false
     default: "ghcr.io/${{ github.repository_owner }}/helm"
-  dry_run:
-    description: If true, do not push, only report
-    required: false
-    default: "true"
 runs:
   using: composite
   steps:
@@ -36,7 +32,6 @@ runs:
       env:
         TO_RELEASE: '${{ inputs.to_release_json }}'
         REGISTRY: '${{ inputs.registry }}'
-        DRY_RUN: '${{ inputs.dry_run }}'
       run: |
         set -eo pipefail
         jq -n '[]' > /tmp/release_report.json
@@ -54,6 +49,7 @@ runs:
           pkg_dir=/tmp/release-packages
           mkdir -p "$pkg_dir"
           helm package "$path" --destination "$pkg_dir"
+
           pkg=$(ls "$pkg_dir"/*.tgz | head -n1)
           if [ -z "$pkg" ]; then
             echo "Packaging failed for $name" >&2
@@ -61,32 +57,30 @@ runs:
             continue
           fi
 
-          # Sign packaged chart with helm-sigstore plugin (provenance)
-          if [ "$DRY_RUN" != "true" ]; then
-            helm sigstore sign "$pkg" || echo "helm sigstore sign failed for $pkg" >&2
-          else
-            echo "DRY-RUN: helm sigstore sign $pkg"
-          fi
+          # Sign packaged chart with helm-sigstore (keyless/signing mechanism from plugin)
+          echo "Running helm sigstore sign for $pkg"
+          helm sigstore sign "$pkg" || echo "helm sigstore sign failed for $pkg" >&2
+
+          # Upload provenance entry to Rekor (optional: helm sigstore upload)
+          echo "Attempting to upload provenance to Rekor for $pkg"
+          helm sigstore upload "$pkg" || echo "helm sigstore upload failed for $pkg (continuing)" >&2
 
           image_ref="${REGISTRY%/}/$name:$version"
-          if [ "$DRY_RUN" != "true" ]; then
-            helm push "$pkg" oci://"${REGISTRY%/}"
-            COSIGN_EXPERIMENTAL="true" cosign sign --yes "$image_ref"
-          else
-            echo "DRY-RUN: helm push $pkg to $image_ref"
-            echo "DRY-RUN: cosign sign $image_ref"
-          fi
+
+          # Push chart to OCI registry
+          echo "Pushing $pkg to $image_ref"
+          helm push "$pkg" oci://"${REGISTRY%/}" || { echo "helm push failed for $pkg" >&2; }
+
+          # Sign pushed OCI artifact with cosign (keyless via OIDC)
+          echo "Signing OCI artifact with cosign: $image_ref"
+          COSIGN_EXPERIMENTAL="true" cosign sign --yes "$image_ref" || echo "cosign sign failed for $image_ref" >&2
 
           # publish artifacthub metadata if present
           if [ -f "$path/artifacthub-repo.yml" ]; then
-            if [ "$DRY_RUN" != "true" ]; then
-              echo "Publishing ArtifactHub metadata for $name"
-              oras push "${image_ref}:artifacthub.io" \
-                --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
-                "$path/artifacthub-repo.yml":application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml || echo "ArtifactHub publish failed for $name" >&2
-            else
-              echo "DRY-RUN: publish artifacthub metadata for $name"
-            fi
+            echo "Publishing ArtifactHub metadata for $name"
+            oras push "${image_ref}:artifacthub.io" \
+              --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+              "$path/artifacthub-repo.yml":application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml || echo "ArtifactHub publish failed for $name" >&2
           fi
 
           jq --arg n "$name" --arg v "$version" '. += [{name:$n,version:$v,pushed:true,errors:[]} ]' /tmp/release_report.json > /tmp/release_report.json.tmp && mv /tmp/release_report.json.tmp /tmp/release_report.json

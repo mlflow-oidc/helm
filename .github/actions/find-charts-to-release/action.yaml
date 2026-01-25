@@ -13,10 +13,6 @@ inputs:
     description: OCI registry root (e.g. ghcr.io/org/helm)
     required: false
     default: "ghcr.io/${{ github.repository_owner }}/helm"
-  dry_run:
-    description: Only report what would be released
-    required: false
-    default: "true"
 runs:
   using: composite
   steps:
@@ -27,7 +23,6 @@ runs:
         CHARTS_JSON_INPUT='${{ inputs.charts_json }}'
         CHARTS_DIR='${{ inputs.charts_dir }}'
         REGISTRY='${{ inputs.registry }}'
-        DRY_RUN='${{ inputs.dry_run }}'
 
         jq -n '[]' > /tmp/all.json
         jq -n '[]' > /tmp/to_release.json
