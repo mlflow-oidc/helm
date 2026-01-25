@@ -21,12 +21,6 @@ runs:
         tar -xzf oras_1.3.0_linux_amd64.tar.gz
         sudo mv oras /usr/local/bin/oras
 
-    - name: Install Helm Sigstore Plugin
-      shell: bash
-      run: |
-        set -eo pipefail
-        helm plugin install https://github.com/sigstore/helm-sigstore --verify=false || true
-
     - name: Release charts
       shell: bash
       env:
@@ -57,14 +51,6 @@ runs:
             continue
           fi
 
-          # Sign packaged chart with helm-sigstore (keyless/signing mechanism from plugin)
-          echo "Running helm sigstore sign for $pkg"
-          helm sigstore sign "$pkg" || echo "helm sigstore sign failed for $pkg" >&2
-
-          # Upload provenance entry to Rekor (optional: helm sigstore upload)
-          echo "Attempting to upload provenance to Rekor for $pkg"
-          helm sigstore upload "$pkg" || echo "helm sigstore upload failed for $pkg (continuing)" >&2
-
           image_ref="${REGISTRY%/}/$name:$version"
           image_base="${REGISTRY%/}/$name"
 
@@ -75,6 +61,8 @@ runs:
           # Sign pushed OCI artifact with cosign (keyless via OIDC)
           echo "Signing OCI artifact with cosign: $image_ref"
           COSIGN_EXPERIMENTAL="true" cosign sign --yes "$image_ref" || echo "cosign sign failed for $image_ref" >&2
+
+          # Publish ArtifactHub metadata if present
           if [ -f "$path/artifacthub-repo.yml" ]; then
             echo "Publishing ArtifactHub metadata for $name"
             oras push "${image_base}:artifacthub.io" \
