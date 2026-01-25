@@ -30,3 +30,8 @@ runs:
         done
         CHARTS_JSON=$(jq -c '.' /tmp/charts.json)
         echo "charts=$CHARTS_JSON" >> "$GITHUB_OUTPUT"
+    - name: Show charts
+      shell: bash
+      run: |
+        echo "Charts found:"
+        echo "${{ steps.list.outputs.charts }}" | jq '.'
