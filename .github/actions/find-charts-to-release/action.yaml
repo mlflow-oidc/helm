@@ -1,0 +1,95 @@
+name: Find Charts to Release
+description: Compare local chart versions with remote (OCI) versions and list charts to release.
+inputs:
+  charts_json:
+    description: JSON array of charts (from `list-charts`). If empty, action will scan `charts_dir`.
+    required: false
+    default: ""
+  charts_dir:
+    description: Directory containing charts (fallback)
+    required: false
+    default: "charts"
+  registry:
+    description: OCI registry root (e.g. ghcr.io/org/helm)
+    required: false
+    default: "ghcr.io/${{ github.repository_owner }}/helm"
+  dry_run:
+    description: Only report what would be released
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Find remote versions and compare
+      shell: bash
+      run: |
+        set -eo pipefail
+        CHARTS_JSON_INPUT='${{ inputs.charts_json }}'
+        CHARTS_DIR='${{ inputs.charts_dir }}'
+        REGISTRY='${{ inputs.registry }}'
+        DRY_RUN='${{ inputs.dry_run }}'
+
+        jq -n '[]' > /tmp/all.json
+        jq -n '[]' > /tmp/to_release.json
+
+        if [ -n "$CHARTS_JSON_INPUT" ]; then
+          charts=$(echo "$CHARTS_JSON_INPUT")
+        else
+          charts=$(jq -n '[]')
+          for d in "$CHARTS_DIR"/*; do
+            [ -d "$d" ] || continue
+            if [ -f "$d/Chart.yaml" ]; then
+              name=$(awk '/^name:/ {print $2; exit}' "$d/Chart.yaml" || true)
+              version=$(awk '/^version:/ {print $2; exit}' "$d/Chart.yaml" || true)
+              charts=$(echo "$charts" | jq --arg n "$name" --arg p "$d" --arg v "$version" '. += [{name:$n,path:$p,version:$v}]')
+            fi
+          done
+        fi
+
+        for row in $(echo "$charts" | jq -c '.[]'); do
+          name=$(echo "$row" | jq -r '.name')
+          path=$(echo "$row" | jq -r '.path')
+          local_version=$(echo "$row" | jq -r '.version')
+
+          remote_version=null
+          set +e
+          out=$(helm show chart oci://"${REGISTRY%/}"/"${name}" 2>&1)
+          rc=$?
+          set -e
+          if [ $rc -ne 0 ]; then
+            echo "helm show chart failed for $name: $out" >&2
+            if echo "$out" | grep -qi "manifest" || echo "$out" | grep -qi "not found"; then
+              remote_version=null
+            else
+              echo "Error retrieving remote chart for $name" >&2
+              exit 1
+            fi
+          else
+            remote_version=$(echo "$out" | awk '/^version:/ {print $2; exit}' || true)
+          fi
+
+          # compare versions: if remote_version is null => schedule release
+          should_release=false
+          if [ "$remote_version" = "null" ] || [ -z "$remote_version" ]; then
+            should_release=true
+          else
+            # pick higher version using sort -V
+            if [ "$local_version" != "$remote_version" ]; then
+              high=$(printf '%s\n%s\n' "$remote_version" "$local_version" | sort -V | tail -n1)
+              if [ "$high" = "$local_version" ]; then
+                should_release=true
+              fi
+            fi
+          fi
+
+          jq --arg n "$name" --arg p "$path" --arg lv "$local_version" --arg rv "$remote_version" '. += [{name:$n,path:$p,local_version:$lv,remote_version:$rv}]' /tmp/all.json > /tmp/all.json.tmp && mv /tmp/all.json.tmp /tmp/all.json
+
+          if [ "$should_release" = true ]; then
+            jq --arg n "$name" --arg p "$path" --arg lv "$local_version" --arg rv "$remote_version" '. += [{name:$n,path:$p,local_version:$lv,remote_version:$rv}]' /tmp/to_release.json > /tmp/to_release.json.tmp && mv /tmp/to_release.json.tmp /tmp/to_release.json
+          fi
+        done
+
+        ALL=$(jq -c '.' /tmp/all.json)
+        TODO=$(jq -c '.' /tmp/to_release.json)
+        echo "all=$ALL" >> "$GITHUB_OUTPUT"
+        echo "to_release=$TODO" >> "$GITHUB_OUTPUT"

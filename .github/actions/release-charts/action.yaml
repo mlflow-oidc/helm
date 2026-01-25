@@ -1,0 +1,94 @@
+name: Release Charts
+description: Prepare and release charts listed in `to_release` JSON package, sign, push OCI, sign with cosign, publish ArtifactHub metadata.
+inputs:
+  to_release_json:
+    description: JSON array as produced by `find-charts-to-release` (to_release)
+    required: true
+  registry:
+    description: OCI registry (e.g. ghcr.io/org/helm)
+    required: false
+    default: "ghcr.io/${{ github.repository_owner }}/helm"
+  dry_run:
+    description: If true, do not push, only report
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Install tools (helm-sigstore, cosign, oras)
+      shell: bash
+      run: |
+        set -eo pipefail
+        helm plugin install https://github.com/sigstore/helm-sigstore || true
+        # install cosign
+        curl -fsSL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
+        chmod +x /usr/local/bin/cosign || true
+        # install oras
+        ORAS_VERSION="v1.3.0"
+        curl -LO https://github.com/oras-project/oras/releases/download/${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz
+        tar -xzf oras_${ORAS_VERSION}_linux_amd64.tar.gz
+        sudo mv oras /usr/local/bin/oras || true
+
+    - name: Release charts
+      shell: bash
+      env:
+        TO_RELEASE: '${{ inputs.to_release_json }}'
+        REGISTRY: '${{ inputs.registry }}'
+        DRY_RUN: '${{ inputs.dry_run }}'
+      run: |
+        set -eo pipefail
+        jq -n '[]' > /tmp/release_report.json
+
+        for row in $(echo "$TO_RELEASE" | jq -c '.[]'); do
+          name=$(echo "$row" | jq -r '.name')
+          path=$(echo "$row" | jq -r '.path')
+          version=$(echo "$row" | jq -r '.local_version')
+
+          echo "Preparing $name version $version from $path"
+          if ! (cd "$path" && helm dependency update >/dev/null 2>&1 || helm dependency build >/dev/null 2>&1); then
+            echo "Dependencies update/build failed for $name" >&2
+          fi
+
+          pkg_dir=/tmp/release-packages
+          mkdir -p "$pkg_dir"
+          helm package "$path" --destination "$pkg_dir"
+          pkg=$(ls "$pkg_dir"/*.tgz | head -n1)
+          if [ -z "$pkg" ]; then
+            echo "Packaging failed for $name" >&2
+            jq --arg n "$name" --arg v "$version" '. += [{name:$n,version:$v,pushed:false,errors:["packaging_failed"]}]' /tmp/release_report.json > /tmp/release_report.json.tmp && mv /tmp/release_report.json.tmp /tmp/release_report.json
+            continue
+          fi
+
+          # Sign packaged chart with helm-sigstore plugin (provenance)
+          if [ "$DRY_RUN" != "true" ]; then
+            helm sigstore sign "$pkg" || echo "helm sigstore sign failed for $pkg" >&2
+          else
+            echo "DRY-RUN: helm sigstore sign $pkg"
+          fi
+
+          image_ref="${REGISTRY%/}/$name:$version"
+          if [ "$DRY_RUN" != "true" ]; then
+            helm push "$pkg" oci://"${REGISTRY%/}"
+            COSIGN_EXPERIMENTAL="true" cosign sign --yes "$image_ref"
+          else
+            echo "DRY-RUN: helm push $pkg to $image_ref"
+            echo "DRY-RUN: cosign sign $image_ref"
+          fi
+
+          # publish artifacthub metadata if present
+          if [ -f "$path/artifacthub-repo.yml" ]; then
+            if [ "$DRY_RUN" != "true" ]; then
+              echo "Publishing ArtifactHub metadata for $name"
+              oras push "${image_ref}:artifacthub.io" \
+                --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+                "$path/artifacthub-repo.yml":application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml || echo "ArtifactHub publish failed for $name" >&2
+            else
+              echo "DRY-RUN: publish artifacthub metadata for $name"
+            fi
+          fi
+
+          jq --arg n "$name" --arg v "$version" '. += [{name:$n,version:$v,pushed:true,errors:[]} ]' /tmp/release_report.json > /tmp/release_report.json.tmp && mv /tmp/release_report.json.tmp /tmp/release_report.json
+        done
+
+        REPORT=$(jq -c '.' /tmp/release_report.json)
+        echo "report=$REPORT" >> "$GITHUB_OUTPUT"

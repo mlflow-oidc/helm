@@ -1,0 +1,28 @@
+name: List Charts
+description: Enumerate charts in charts/ and output JSON array of {name,path,version}
+inputs:
+  charts_dir:
+    description: Directory containing charts
+    required: false
+    default: "charts"
+runs:
+  using: "composite"
+  steps:
+    - name: List charts
+      shell: bash
+      run: |
+        set -eo pipefail
+        CHARTS_DIR="${{ inputs.charts_dir }}"
+        jq -n '[]' > /tmp/charts.json || true
+        for d in "$CHARTS_DIR"/*; do
+          [ -d "$d" ] || continue
+          if [ ! -f "$d/Chart.yaml" ]; then
+            echo "Skipping $d (no Chart.yaml)" >&2
+            continue
+          fi
+          name=$(awk '/^name:/ {print $2; exit}' "$d/Chart.yaml" || true)
+          version=$(awk '/^version:/ {print $2; exit}' "$d/Chart.yaml" || true)
+          jq --arg n "$name" --arg p "$d" --arg v "$version" '. += [{name:$n, path:$p, version:$v}]' /tmp/charts.json > /tmp/charts.json.tmp && mv /tmp/charts.json.tmp /tmp/charts.json
+        done
+        CHARTS_JSON=$(jq -c '.' /tmp/charts.json)
+        echo "charts=$CHARTS_JSON" >> "$GITHUB_OUTPUT"

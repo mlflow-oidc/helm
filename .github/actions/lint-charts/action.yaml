@@ -1,0 +1,70 @@
+name: Lint Charts
+description: Lint charts using helm lint and template. Accepts charts list or charts_dir.
+inputs:
+  charts_json:
+    description: JSON array of charts (from list-charts). If empty, charts_dir will be used.
+    required: false
+    default: ""
+  charts_dir:
+    description: Directory containing charts (fallback)
+    required: false
+    default: "charts"
+  fail_fast:
+    description: Fail on first lint error
+    required: false
+    default: "true"
+runs:
+  using: "composite"
+  steps:
+    - name: Run lint
+      id: lint
+      shell: bash
+      run: |
+        set -eo pipefail
+        CHARTS_JSON_INPUT='${{ inputs.charts_json }}'
+        CHARTS_DIR='${{ inputs.charts_dir }}'
+        FAIL_FAST='${{ inputs.fail_fast }}'
+
+        jq -n '[]' > /tmp/lint_report.json
+
+        if [ -n "$CHARTS_JSON_INPUT" ]; then
+          charts=$(echo "$CHARTS_JSON_INPUT")
+        else
+          # call the list-charts fallback
+          charts=$(jq -c '.' <(jq -n '[]'))
+          for d in "$CHARTS_DIR"/*; do
+            [ -d "$d" ] || continue
+            if [ -f "$d/Chart.yaml" ]; then
+              name=$(awk '/^name:/ {print $2; exit}' "$d/Chart.yaml" || true)
+              version=$(awk '/^version:/ {print $2; exit}' "$d/Chart.yaml" || true)
+              charts=$(echo "$charts" | jq --arg n "$name" --arg p "$d" --arg v "$version" '. += [{name:$n,path:$p,version:$v}]')
+            fi
+          done
+        fi
+
+        success=true
+        for row in $(echo "$charts" | jq -c '.[]'); do
+          name=$(echo "$row" | jq -r '.name')
+          path=$(echo "$row" | jq -r '.path')
+          echo "Linting $name ($path)"
+
+          if ! (cd "$path" && helm dependency update >/dev/null 2>&1 || helm dependency build >/dev/null 2>&1); then
+            echo "Dependencies update/build failed for $name" >&2
+          fi
+
+          if ! (cd "$path" && helm lint .); then
+            success=false
+            jq --arg n "$name" --arg p "$path" '. += [{name:$n,path:$p,result:"lint_failed"}]' /tmp/lint_report.json > /tmp/lint_report.json.tmp && mv /tmp/lint_report.json.tmp /tmp/lint_report.json
+            if [ "$FAIL_FAST" = "true" ]; then
+              echo "Lint failed for $name" >&2
+              echo "success=false" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+          else
+            jq --arg n "$name" --arg p "$path" '. += [{name:$n,path:$p,result:"ok"}]' /tmp/lint_report.json > /tmp/lint_report.json.tmp && mv /tmp/lint_report.json.tmp /tmp/lint_report.json
+          fi
+        done
+
+        echo "success=$success" >> "$GITHUB_OUTPUT"
+        LINT_JSON=$(jq -c '.' /tmp/lint_report.json)
+        echo "report=$LINT_JSON" >> "$GITHUB_OUTPUT"

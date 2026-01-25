@@ -15,8 +15,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    outputs:
-      artifacthub_charts: ${{ steps.push_charts.outputs.artifacthub_charts }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -38,39 +36,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push charts (OCI-only)
-        id: push_charts
-        uses: ./.github/actions/push-charts
+      - name: List charts
+        id: list_charts
+        uses: ./.github/actions/list-charts
         with:
           charts_dir: charts
+
+      - name: Lint charts
+        id: lint_charts
+        uses: ./.github/actions/lint-charts
+        with:
+          charts_json: ${{ steps.list_charts.outputs.charts }}
+          fail_fast: "true"
+
+      - name: Find charts to release
+        id: find_charts
+        uses: ./.github/actions/find-charts-to-release
+        with:
+          charts_json: ${{ steps.list_charts.outputs.charts }}
           registry: ghcr.io/${{ github.repository_owner }}/helm
+          dry_run: "false"
 
-  publish-artifacthub:
-    needs: release
-    runs-on: ubuntu-latest
-    if: needs.release.outputs.artifacthub_charts != '[]'
-    strategy:
-      fail-fast: false
-      matrix:
-        chart: ${{ fromJson(needs.release.outputs.artifacthub_charts) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Release charts
+        id: release_charts
+        uses: ./.github/actions/release-charts
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          to_release_json: ${{ steps.find_charts.outputs.to_release }}
+          registry: ghcr.io/${{ github.repository_owner }}/helm
+          dry_run: "false"
 
-      - name: Sign OCI chart image
-        uses: ./.github/actions/sign-oci
-        with:
-          image: ghcr.io/${{ github.repository_owner }}/helm/${{ matrix.chart.name }}:${{ matrix.chart.version }}
 
-      - name: Publish Artifact Hub metadata
-        uses: ./.github/actions/publish-artifacthub
-        with:
-          image_name: ghcr.io/${{ github.repository_owner }}/helm/${{ matrix.chart.name }}
-          metadata_file: ${{ matrix.chart.path }}/artifacthub-repo.yml
