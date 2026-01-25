@@ -35,4 +35,8 @@ runs:
       shell: bash
       run: |
         echo "Charts found:"
-        echo "${{ steps.list.outputs.charts }}" | jq '.'
+        if [ -s /tmp/charts.json ]; then
+          cat /tmp/charts.json | jq '.'
+        else
+          echo '[]'
+        fi
