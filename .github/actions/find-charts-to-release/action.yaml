@@ -16,6 +16,7 @@ runs:
   using: composite
   steps:
     - name: Find remote versions and compare
+      id: find
       shell: bash
       run: |
         set -eo pipefail
@@ -77,5 +78,19 @@ runs:
 
         ALL=$(jq -c '.' /tmp/all.json)
         TODO=$(jq -c '.' /tmp/to_release.json)
-        echo "all=$ALL" >> "$GITHUB_OUTPUT"
         echo "to_release=$TODO" >> "$GITHUB_OUTPUT"
+    - name: Show charts to release
+      shell: bash
+      run: |
+        echo "All charts:"
+        if [ -s /tmp/all.json ]; then
+          cat /tmp/all.json | jq '.'
+        else
+          echo '[]'
+        fi
+        echo "Charts to release:"
+        if [ -s /tmp/to_release.json ]; then
+          cat /tmp.to_release.json | jq '.'
+        else
+          echo '[]'
+        fi
