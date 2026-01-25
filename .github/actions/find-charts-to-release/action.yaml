@@ -90,7 +90,7 @@ runs:
         fi
         echo "Charts to release:"
         if [ -s /tmp/to_release.json ]; then
-          cat /tmp.to_release.json | jq '.'
+          cat /tmp/to_release.json | jq '.'
         else
           echo '[]'
         fi
