@@ -10,10 +10,13 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      artifacthub_charts: ${{ steps.push_charts.outputs.artifacthub_charts }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -35,22 +38,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Release Helm Charts
-        uses: helm/chart-releaser-action@v1.7.0
+      - name: Push charts (OCI-only)
+        id: push_charts
+        uses: ./.github/actions/push-charts
         with:
           charts_dir: charts
-          skip_existing: true
-          mark_as_latest: false
+          registry: ghcr.io/${{ github.repository_owner }}/helm
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          HELM_EXPERIMENTAL_OCI: "1"
 
-      - name: Push Charts to GHCR
-        run: |
-          if [ -d ".cr-release-packages" ]; then
-            for pkg in .cr-release-packages/*; do
-              if [ -z "${pkg:-}" ]; then
-                break
-              fi
-              helm push "${pkg}" oci://ghcr.io/${{ github.repository_owner }}/helm
-            done
-          fi
+  publish-artifacthub:
+    needs: release
+    runs-on: ubuntu-latest
+    if: needs.release.outputs.artifacthub_charts != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: ${{ fromJson(needs.release.outputs.artifacthub_charts) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign OCI chart image
+        uses: ./.github/actions/sign-oci
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/helm/${{ matrix.chart.name }}:${{ matrix.chart.version }}
+
+      - name: Publish Artifact Hub metadata
+        uses: ./.github/actions/publish-artifacthub
+        with:
+          image_name: ghcr.io/${{ github.repository_owner }}/helm/${{ matrix.chart.name }}
+          metadata_file: ${{ matrix.chart.path }}/artifacthub-repo.yml

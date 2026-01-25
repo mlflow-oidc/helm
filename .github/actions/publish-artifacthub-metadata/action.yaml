@@ -1,0 +1,30 @@
+name: Publish Artifact Hub OCI metadata
+description: Push artifacthub-repo.yml to OCI registry
+
+inputs:
+  image_name:
+    description: OCI repository name (e.g. ghcr.io/mlflow-oidc/helm/chartname)
+    required: true
+
+  metadata_file:
+    description: Path to artifacthub-repo.yml
+    default: artifacthub-repo.yml
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Install ORAS
+      shell: bash
+      run: |
+        curl -LO https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz
+        tar -xzf oras_1.2.0_linux_amd64.tar.gz
+        sudo mv oras /usr/local/bin/oras
+
+    - name: Push Artifact Hub metadata
+      shell: bash
+      run: |
+        oras push \
+          ${{ inputs.image_name }}:artifacthub.io \
+          --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+          ${{ inputs.metadata_file }}:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml

@@ -1,0 +1,31 @@
+name: Publish ArtifactHub metadata
+description: Push artifacthub-repo.yml into the chart OCI artifact via ORAS.
+inputs:
+  image_name:
+    description: Image name without tag (e.g. ghcr.io/org/helm/name)
+    required: true
+  metadata_file:
+    description: Path to artifacthub-repo.yml
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install ORAS
+      shell: bash
+      run: |
+        set -eo pipefail
+        ORAS_VERSION="v1.3.0"
+        curl -LO https://github.com/oras-project/oras/releases/download/${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz
+        tar -xzf oras_${ORAS_VERSION}_linux_amd64.tar.gz
+        sudo mv oras /usr/local/bin/oras
+
+    - name: Push Artifact Hub metadata
+      shell: bash
+      env:
+        IMAGE_NAME: "${{ inputs.image_name }}"
+        METADATA_FILE: "${{ inputs.metadata_file }}"
+      run: |
+        set -eo pipefail
+        oras push "${IMAGE_NAME}:artifacthub.io" \
+          --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+          "${METADATA_FILE}":application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
