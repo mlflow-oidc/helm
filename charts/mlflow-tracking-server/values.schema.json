@@ -6,6 +6,8 @@
   "properties": {
     "fullnameOverride": { "type": ["string", "null"], "description": "Optional full name override for the chart" },
 
+    "common": { "type": "object", "description": "Values injected by common chart libraries (permissive)", "additionalProperties": true },
+
     "replicas": {
       "type": "integer",
       "minimum": 0,
