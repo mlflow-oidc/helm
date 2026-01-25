@@ -44,8 +44,6 @@ jobs:
         with:
           charts_dir: charts
           registry: ghcr.io/${{ github.repository_owner }}/helm
-        env:
-          HELM_EXPERIMENTAL_OCI: "1"
 
   publish-artifacthub:
     needs: release

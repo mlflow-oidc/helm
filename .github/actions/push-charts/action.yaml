@@ -34,6 +34,19 @@ runs:
           fi
 
           echo "Packaging chart: $chart_dir"
+
+          # Ensure chart dependencies are present (download or build them)
+          echo "Updating chart dependencies for $chart_dir"
+          if ! (cd "$chart_dir" && helm dependency update); then
+            echo "helm dependency update failed for $chart_dir; attempting helm dependency build as fallback"
+            if ! (cd "$chart_dir" && helm dependency build); then
+              echo "ERROR: failed to fetch/build dependencies for $chart_dir" >&2
+              echo "Chart.yaml contents:" && sed -n '1,200p' "$chart_dir/Chart.yaml" || true
+              echo "If this chart has external dependencies, run 'helm repo add' for the required repos or commit the dependency charts into the chart's 'charts/' directory." >&2
+              exit 1
+            fi
+          fi
+
           helm package "$chart_dir" --destination /tmp/oci-packages
 
           for pkg in /tmp/oci-packages/*.tgz; do
