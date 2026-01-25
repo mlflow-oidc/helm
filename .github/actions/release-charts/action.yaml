@@ -75,3 +75,12 @@ runs:
 
         REPORT=$(jq -c '.' /tmp/release_report.json)
         echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+    - name: Show release report
+      shell: bash
+      run: |
+        echo "Release report:"
+        if [ -s /tmp/release_report.json ]; then
+          cat /tmp/release_report.json | jq '.'
+        else
+          echo '[]'
+        fi
