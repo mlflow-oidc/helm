@@ -50,9 +50,11 @@ jobs:
       - name: Find charts to release
         id: find_charts
         uses: ./.github/actions/find-charts-to-release
+        with:
+          charts_json: ${{ steps.list_charts.outputs.charts }}
 
       - name: Release charts
         id: release_charts
         uses: ./.github/actions/release-charts
-
-
+        with:
+          to_release_json: ${{ steps.find_charts.outputs.to_release }}

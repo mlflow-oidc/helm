@@ -5,6 +5,10 @@ inputs:
     description: Directory containing charts
     required: false
     default: "charts"
+outputs:
+  charts:
+    description: JSON array of charts with name, path, version
+    value: ${{ steps.list.outputs.charts }}
 runs:
   using: "composite"
   steps:

@@ -2,17 +2,16 @@ name: Find Charts to Release
 description: Compare local chart versions with remote (OCI) versions and list charts to release.
 inputs:
   charts_json:
-    description: JSON array of charts (from `list-charts`). If empty, action will scan `charts_dir`.
-    required: false
-    default: ""
-  charts_dir:
-    description: Directory containing charts (fallback)
-    required: false
-    default: "charts"
+    description: JSON array of charts (from `list-charts`). **Required** — the action will not scan local directories.
+    required: true
   registry:
     description: OCI registry root (e.g. ghcr.io/org/helm)
     required: false
     default: "ghcr.io/${{ github.repository_owner }}/helm"
+outputs:
+  to_release:
+    description: JSON array of charts that need to be released (local version > remote version)
+    value: ${{ steps.find.outputs.to_release }}
 runs:
   using: composite
   steps:
@@ -21,7 +20,6 @@ runs:
       run: |
         set -eo pipefail
         CHARTS_JSON_INPUT='${{ inputs.charts_json }}'
-        CHARTS_DIR='${{ inputs.charts_dir }}'
         REGISTRY='${{ inputs.registry }}'
 
         jq -n '[]' > /tmp/all.json
@@ -30,15 +28,8 @@ runs:
         if [ -n "$CHARTS_JSON_INPUT" ]; then
           charts=$(echo "$CHARTS_JSON_INPUT")
         else
-          charts=$(jq -n '[]')
-          for d in "$CHARTS_DIR"/*; do
-            [ -d "$d" ] || continue
-            if [ -f "$d/Chart.yaml" ]; then
-              name=$(awk '/^name:/ {print $2; exit}' "$d/Chart.yaml" || true)
-              version=$(awk '/^version:/ {print $2; exit}' "$d/Chart.yaml" || true)
-              charts=$(echo "$charts" | jq --arg n "$name" --arg p "$d" --arg v "$version" '. += [{name:$n,path:$p,version:$v}]')
-            fi
-          done
+          echo "No charts_json provided to find-charts-to-release; please run list-charts and pass its output." >&2
+          exit 1
         fi
 
         for row in $(echo "$charts" | jq -c '.[]'); do

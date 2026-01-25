@@ -1,14 +1,9 @@
 name: Lint Charts
-description: Lint charts using helm lint and template. Accepts charts list or charts_dir.
+description: Lint charts using helm lint and template. Requires `charts_json` (from `list-charts`).
 inputs:
   charts_json:
-    description: JSON array of charts (from list-charts). If empty, charts_dir will be used.
-    required: false
-    default: ""
-  charts_dir:
-    description: Directory containing charts (fallback)
-    required: false
-    default: "charts"
+    description: JSON array of charts (from list-charts). Must be provided.
+    required: true
   fail_fast:
     description: Fail on first lint error
     required: false
@@ -22,7 +17,6 @@ runs:
       run: |
         set -eo pipefail
         CHARTS_JSON_INPUT='${{ inputs.charts_json }}'
-        CHARTS_DIR='${{ inputs.charts_dir }}'
         FAIL_FAST='${{ inputs.fail_fast }}'
 
         jq -n '[]' > /tmp/lint_report.json
@@ -30,16 +24,9 @@ runs:
         if [ -n "$CHARTS_JSON_INPUT" ]; then
           charts=$(echo "$CHARTS_JSON_INPUT")
         else
-          # call the list-charts fallback
-          charts=$(jq -c '.' <(jq -n '[]'))
-          for d in "$CHARTS_DIR"/*; do
-            [ -d "$d" ] || continue
-            if [ -f "$d/Chart.yaml" ]; then
-              name=$(awk '/^name:/ {print $2; exit}' "$d/Chart.yaml" || true)
-              version=$(awk '/^version:/ {print $2; exit}' "$d/Chart.yaml" || true)
-              charts=$(echo "$charts" | jq --arg n "$name" --arg p "$d" --arg v "$version" '. += [{name:$n,path:$p,version:$v}]')
-            fi
-          done
+          echo "No charts_json provided to lint-charts action; please run list-charts and pass its output." >&2
+          echo "success=false" >> "$GITHUB_OUTPUT"
+          exit 1
         fi
 
         success=true
