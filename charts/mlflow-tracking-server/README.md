@@ -304,6 +304,12 @@ serviceAccount:
     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789:role/mlflow-s3-access"
 ```
 
+## Signature validation
+
+```bash
+cosign verify ghcr.io/mlflow-oidc/helm/mlflow-tracking-server:<version> --certificate-identity="https://github.com/mlflow-oidc/helm/.github/workflows/release.yaml@refs/heads/main" --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
 ---
 
 ## License
