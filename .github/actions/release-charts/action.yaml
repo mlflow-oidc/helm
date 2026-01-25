@@ -19,7 +19,7 @@ runs:
       shell: bash
       run: |
         set -eo pipefail
-        helm plugin install https://github.com/sigstore/helm-sigstore || true
+        helm plugin install https://github.com/sigstore/helm-sigstore --verify=false || true
         # install cosign
         curl -fsSL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
         chmod +x /usr/local/bin/cosign || true
