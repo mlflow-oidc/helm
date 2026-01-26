@@ -12,6 +12,9 @@ outputs:
   to_release:
     description: JSON array of charts that need to be released (local version > remote version)
     value: ${{ steps.find.outputs.to_release }}
+  release_needed:
+    description: "true if `to_release` array is not empty ('true' or 'false')"
+    value: ${{ steps.find.outputs.release_needed }}
 runs:
   using: composite
   steps:
@@ -79,6 +82,12 @@ runs:
         ALL=$(jq -c '.' /tmp/all.json)
         TODO=$(jq -c '.' /tmp/to_release.json)
         echo "to_release=$TODO" >> "$GITHUB_OUTPUT"
+        # set release_needed output to 'true' if to_release contains any items, else 'false'
+        if [ -s /tmp/to_release.json ] && [ "$(jq -r 'length' /tmp/to_release.json)" -gt 0 ]; then
+          echo "release_needed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "release_needed=false" >> "$GITHUB_OUTPUT"
+        fi
     - name: Show charts to release
       shell: bash
       run: |

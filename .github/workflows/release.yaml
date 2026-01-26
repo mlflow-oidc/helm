@@ -54,6 +54,7 @@ jobs:
           charts_json: ${{ steps.list_charts.outputs.charts }}
 
       - name: Release charts
+        if: ${{ steps.find_charts.outputs.release_needed == 'true' }}
         id: release_charts
         uses: ./.github/actions/release-charts
         with:

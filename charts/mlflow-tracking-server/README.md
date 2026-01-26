@@ -1,5 +1,7 @@
 # MLflow Tracking Server Helm Chart
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/mlflow-tracking-server)](https://artifacthub.io/packages/search?repo=mlflow-tracking-server)
+
 Deploy MLflow Tracking Server with OIDC authentication using [mlflow-oidc-auth](https://github.com/mlflow-oidc/mlflow-oidc-auth).
 
 ## Features
