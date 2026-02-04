@@ -31,21 +31,21 @@ spec:
           {{ include "common.healthcheck.readiness" . | nindent 10 }}
           {{ include "common.healthcheck.startup" . | nindent 10 }}
           {{- end }}
+          {{- /* Enable Kubernetes secrets provider when mounting secrets as files */}}
+          {{- if $mountAsFiles.enabled }}
           env:
-            {{- /* Enable Kubernetes secrets provider when mounting secrets as files */}}
-            {{- if $mountAsFiles.enabled }}
             - name: CONFIG_K8S_SECRETS_ENABLED
               value: "true"
             - name: CONFIG_K8S_SECRETS_PATH
               value: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" | quote }}
-            {{- end }}
+          {{- end }}
+          {{- /* Mount secrets as files for K8s secrets provider */}}
+          {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
           volumeMounts:
-            {{- /* Mount secrets as files for K8s secrets provider */}}
-            {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
             - name: mlflow-secrets
               mountPath: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" }}
               readOnly: true
-            {{- end }}
+          {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ template "common.fullname" . }}
@@ -57,11 +57,11 @@ spec:
             {{ include "common.envvar.shared.configs" . | indent 12 }}
             {{ include "common.envvar.shared.secrets" . | indent 12 }}
           {{ include "common.resources" . | nindent 10 }}
+      {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
       volumes:
-        {{- /* Secret volume for K8s secrets provider */}}
-        {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
+      {{- /* Secret volume for K8s secrets provider */}}
         - name: mlflow-secrets
           secret:
             secretName: {{ $secrets.externalSecretName }}
-        {{- end }}
+      {{- end }}
 {{- end -}}
