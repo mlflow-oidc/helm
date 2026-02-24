@@ -21,8 +21,8 @@ spec:
             protocol: TCP
           image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
-          command: ["mlflow"]
           args:
+            - mlflow
             - server
             - --app-name
             - oidc-auth
