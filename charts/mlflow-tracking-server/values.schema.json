@@ -155,6 +155,11 @@
         "fsGroup": { "type": "integer", "default": 1000 }
       },
       "additionalProperties": false
+    },
+    "global": {
+      "type": "object",
+      "description": "Helm global values (inherited from parent charts or CLI).",
+      "additionalProperties": true
     }
   },
   "additionalProperties": false
