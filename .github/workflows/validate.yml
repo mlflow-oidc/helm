@@ -1,9 +1,6 @@
 name: validate
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -12,47 +9,38 @@ jobs:
   list-charts:
     runs-on: ubuntu-latest
     outputs:
-      charts: ${{ steps.chart-list.outputs.charts }}
+      charts: ${{ steps.list.outputs.charts }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Get list of Helm charts
-        id: chart-list
-        run: |
-          charts=$(find ./charts -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | grep -v '^common$')
-          echo "charts=$(echo "$charts" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+      - name: List charts
+        id: list
+        uses: ./.github/actions/list-charts
+        with:
+          charts_dir: charts
 
-  validate:
+  lint:
     needs: list-charts
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        chart: ${{ fromJson(needs.list-charts.outputs.charts) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Lint charts
+        id: lint
+        uses: ./.github/actions/lint-charts
+        with:
+          charts_json: ${{ needs.list-charts.outputs.charts }}
+          fail_fast: "true"
+
+      - name: Check lint result
         run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-
-      - name: Update dependencies for chart
-        working-directory: ./charts/${{ matrix.chart }}
-        run: helm dependency update
-
-      - name: Lint chart
-        working-directory: ./charts/${{ matrix.chart }}
-        run: helm lint .
-
-      - name: Template chart
-        working-directory: ./charts/${{ matrix.chart }}
-        run: helm template .
+          if [ "${{ steps.lint.outputs.success }}" != "true" ]; then
+            echo "Lint failed" >&2
+            exit 1
+          fi

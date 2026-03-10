@@ -1,0 +1,18 @@
+replicas: 1
+
+image:
+  registry: ghcr.io/mlflow-oidc
+  name: echo-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+config:
+  port: 8800
+
+healthCheck:
+  liveness:
+    path: health
+  readiness:
+    path: health
+  startup:
+    path: health

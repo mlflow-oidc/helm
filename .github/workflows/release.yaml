@@ -1,15 +1,14 @@
 name: release
 on:
-  workflow_run:
-    workflows: ["validate"]
-    branches: [main]
-    types:
-      - completed
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 jobs:
   release:
@@ -35,22 +34,28 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Release Helm Charts
-        uses: helm/chart-releaser-action@v1.7.0
+      - name: List charts
+        id: list_charts
+        uses: ./.github/actions/list-charts
         with:
           charts_dir: charts
-          skip_existing: true
-          mark_as_latest: false
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Push Charts to GHCR
-        run: |
-          if [ -d ".cr-release-packages" ]; then
-            for pkg in .cr-release-packages/*; do
-              if [ -z "${pkg:-}" ]; then
-                break
-              fi
-              helm push "${pkg}" oci://ghcr.io/${{ github.repository_owner }}/helm
-            done
-          fi
+      - name: Lint charts
+        id: lint_charts
+        uses: ./.github/actions/lint-charts
+        with:
+          charts_json: ${{ steps.list_charts.outputs.charts }}
+          fail_fast: "true"
+
+      - name: Find charts to release
+        id: find_charts
+        uses: ./.github/actions/find-charts-to-release
+        with:
+          charts_json: ${{ steps.list_charts.outputs.charts }}
+
+      - name: Release charts
+        if: ${{ steps.find_charts.outputs.release_needed == 'true' }}
+        id: release_charts
+        uses: ./.github/actions/release-charts
+        with:
+          to_release_json: ${{ steps.find_charts.outputs.to_release }}

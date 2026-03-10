@@ -210,10 +210,9 @@ data:
 
         <div class="grid">
           <section class="card">
-            <h3>How it works</h3>
-            <p>Pick a user below or supply an email on the authorize screen. Groups are embedded as claims.</p>
+            <h3>Getting Started</h3>
+            <p>Configure your client and explore the OpenID Connect discovery document.</p>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-              <a class="btn primary" href="/oauth2/authorize">Client Authorization</a>
               <a class="btn secondary" href="/.well-known/openid-configuration">OpenID Discovery</a>
             </div>
           </section>
@@ -224,26 +223,6 @@ data:
             <a class="btn secondary" href="/oidc/login">Open self-login</a>
           </section>
         </div>
-
-        <section class="card" style="margin-top: 22px;">
-          <h3>Available Test Users</h3>
-          <p>Predefined users with helpful group claims.</p>
-          <div class="users">
-            {{- range .Values.config.users }}
-            <div class="user-row">
-              <div class="user-meta">
-                <strong>{{ .name }} ({{ .username }})</strong>
-                <ul class="tags">
-                  {{- range .groups }}
-                  <li class="tag">{{ . }}</li>
-                  {{- end }}
-                </ul>
-              </div>
-              <a class="btn primary" href="/oauth2/authorize?sub={{ .username }}">Use</a>
-            </div>
-            {{- end }}
-          </div>
-        </section>
 
         <footer>
           <span>Resources:</span>
