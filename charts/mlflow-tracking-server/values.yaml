@@ -136,6 +136,16 @@ serviceAccount:
 #   - config-1
 #   - config-2
 
+# Extra containers to run as sidecars
+extraContainers: []
+# Example:
+# - name: sidecar-container
+#   image: nginx:latest
+#   ports:
+#     - containerPort: 8081
+#   volumeMounts:
+#     - name: shared-data
+#       mountPath: /data
 # Inject env vars from additional existing Secrets
 # sharedSecrets:
 #   - secret-1
