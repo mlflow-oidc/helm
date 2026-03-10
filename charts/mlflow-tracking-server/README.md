@@ -234,6 +234,56 @@ config:
 
 ---
 
+## Extra Containers (Sidecar Pattern)
+
+The `extraContainers` value lets you inject additional containers into the MLflow pod. This is useful whenever the tracking server needs a tightly-coupled process that must share the same network namespace or local filesystem.
+
+### Use Case 1 – Log Shipping with Fluent Bit
+
+Run a [Fluent Bit](https://fluentbit.io/) sidecar that tails application logs written to a shared `emptyDir` volume and forwards them to a centralised backend (Loki, Elasticsearch, Datadog, etc.).
+
+```yaml
+extraContainers:
+  - name: fluent-bit
+    image: fluent/fluent-bit:3
+    volumeMounts:
+      - name: varlog
+        mountPath: /var/log/mlflow
+        readOnly: true
+    env:
+      - name: FLUENT_LOKI_HOST
+        value: "loki.monitoring.svc.cluster.local"
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+```
+
+### Use Case 2 – Prometheus Metrics Exporter
+
+Add a sidecar that exposes custom or aggregated metrics on a dedicated port so Prometheus can scrape it independently from the main MLflow port.
+
+```yaml
+extraContainers:
+  - name: metrics-exporter
+    image: prom/statsd-exporter:latest
+    ports:
+      - name: metrics
+        containerPort: 9102
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+```
+
+---
+
 ## Artifact Storage Examples
 
 ### S3-Compatible Storage
