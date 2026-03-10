@@ -136,12 +136,6 @@ serviceAccount:
 #   - config-1
 #   - config-2
 
-# additional environment variables
-config: {}
-#   data:
-#     key: value
-#     key2: value2
-
 # Extra containers to run as sidecars
 extraContainers: []
 # Example:
