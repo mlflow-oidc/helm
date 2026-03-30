@@ -13,9 +13,17 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+# MLflow server startup arguments
+args:
+  - mlflow
+  - server
+  - --app-name
+  - oidc-auth
+
 # Static configuration for MLflow and mlflow-oidc-auth
 # All values here are rendered into a ConfigMap
 config:
+  port: "8080"
   data:
     # =================================================================
     # MLflow Server Configuration
@@ -56,6 +64,8 @@ config:
     OIDC_GROUPS_ATTRIBUTE: "groups"
     # Optional: Explicit redirect URI (auto-detected if not set)
     # OIDC_REDIRECT_URI: "https://mlflow.example.com/callback"
+    # Optional: JWT audience validation (recommended for production)
+    # OIDC_AUDIENCE: "my-mlflow-client-id"
 
     # =================================================================
     # Authorization Configuration
@@ -64,7 +74,7 @@ config:
     OIDC_GROUP_NAME: "mlflow-users"
     # Groups with admin privileges (comma-separated or list)
     OIDC_ADMIN_GROUP_NAME: "mlflow-admins"
-    # Default permission for new resources: NO_PERMISSIONS, READ, EDIT, MANAGE
+    # Default permission for new resources: NO_PERMISSIONS, READ, USE, EDIT, MANAGE
     DEFAULT_MLFLOW_PERMISSION: "MANAGE"
     # Optional: Permission source order (comma-separated)
     # PERMISSION_SOURCE_ORDER: "user,group,regex,group-regex"
@@ -80,6 +90,40 @@ config:
     DEFAULT_LANDING_PAGE_IS_PERMISSIONS: "true"
     # Automatically redirect to OIDC login
     AUTOMATIC_LOGIN_REDIRECT: "false"
+
+    # =================================================================
+    # Security
+    # =================================================================
+    # Trusted proxy CIDR ranges (comma-separated)
+    # TRUSTED_PROXIES: "10.0.0.0/8,172.16.0.0/12"
+
+    # =================================================================
+    # Feature Flags
+    # =================================================================
+    # Enable AI Gateway permission management
+    # OIDC_GEN_AI_GATEWAY_ENABLED: "true"
+
+    # =================================================================
+    # Workspace / Multi-Tenancy (requires MLflow >=3.10)
+    # =================================================================
+    # MLFLOW_ENABLE_WORKSPACES: "false"
+    # OIDC_WORKSPACE_DEFAULT_PERMISSION: "NO_PERMISSIONS"
+    # OIDC_WORKSPACE_CLAIM_NAME: "workspace"
+    # OIDC_WORKSPACE_DETECTION_PLUGIN: ""
+    # WORKSPACE_CACHE_MAX_SIZE: "1024"
+    # WORKSPACE_CACHE_TTL_SECONDS: "300"
+
+    # =================================================================
+    # Caching
+    # =================================================================
+    # NOTE: When replicas > 1 or HPA is enabled, CACHE_BACKEND must be
+    # set to "redis" and CACHE_REDIS_URL must be provided (via secretRefs,
+    # secrets.externalSecretName, or env). The chart will fail to install
+    # if Redis is not configured for multi-replica deployments.
+    # OIDC_JWKS_CACHE_TTL_SECONDS: "300"
+    # PERMISSION_CACHE_TTL_SECONDS: "30"
+    # CACHE_BACKEND: "redis"
+    # CACHE_KEY_PREFIX: "mlflow_oidc_auth:"
 
     # =================================================================
     # Database Migration
@@ -99,6 +143,8 @@ config:
 # See README.md for example secret manifests
 secrets:
   # Name of existing Kubernetes Secret containing sensitive values
+  # When used with mountAsFiles disabled (default), all keys from
+  # this secret are injected as environment variables
   # Required secrets:
   #   - SECRET_KEY: Session signing key
   #   - OIDC_CLIENT_ID: OAuth client identifier
@@ -114,6 +160,87 @@ secrets:
     enabled: false
     # Path where secrets are mounted (must match CONFIG_K8S_SECRETS_PATH)
     path: "/var/run/secrets/mlflow-oidc-auth"
+
+# -----------------------------------------------------------------
+# Secret Refs — inject individual env vars from external secrets
+# -----------------------------------------------------------------
+# Use this to inject sensitive values from one or more Kubernetes
+# Secrets as individual environment variables.
+# This uses the common library's secretRefs feature and produces
+# valueFrom.secretKeyRef entries in the container spec.
+#
+# This is the recommended approach for injecting sensitive data
+# from external secret operators (External Secrets Operator, Sealed
+# Secrets, etc.) where each secret may contain multiple keys.
+#
+# Example:
+#   secretRefs:
+#     SECRET_KEY:
+#       name: mlflow-oidc-secrets
+#       key: secret-key
+#     OIDC_CLIENT_ID:
+#       name: mlflow-oidc-secrets
+#       key: client-id
+#     OIDC_CLIENT_SECRET:
+#       name: mlflow-oidc-secrets
+#       key: client-secret
+#     OIDC_USERS_DB_URI:
+#       name: mlflow-db-credentials
+#       key: connection-string
+#     MLFLOW_BACKEND_STORE_URI:
+#       name: mlflow-db-credentials
+#       key: connection-string
+#     CACHE_REDIS_URL:
+#       name: redis-credentials
+#       key: url
+#     MLFLOW_WEBHOOK_SECRET_ENCRYPTION_KEY:
+#       name: mlflow-oidc-secrets
+#       key: webhook-encryption-key
+secretRefs: {}
+
+# -----------------------------------------------------------------
+# Additional env vars injected directly into the container
+# -----------------------------------------------------------------
+# Use this for env vars that require special valueFrom sources
+# (fieldRef, resourceFieldRef, etc.) or for overrides
+# env:
+#   - name: MY_POD_NAME
+#     valueFrom:
+#       fieldRef:
+#         fieldPath: metadata.name
+
+# -----------------------------------------------------------------
+# Configuration Provider Settings
+# -----------------------------------------------------------------
+# When using cloud secret providers (AWS, Azure, Vault), set the
+# provider-specific CONFIG_* variables either here in config.data
+# (for non-sensitive settings) or via secretRefs (for credentials).
+#
+# AWS Secrets Manager:
+#   config.data:
+#     CONFIG_AWS_SECRETS_ENABLED: "true"
+#     CONFIG_AWS_SECRETS_NAME: "mlflow-oidc-auth"
+#     CONFIG_AWS_SECRETS_REGION: "us-east-1"
+#
+# AWS Parameter Store:
+#   config.data:
+#     CONFIG_AWS_PARAMETER_STORE_ENABLED: "true"
+#     CONFIG_AWS_PARAMETER_STORE_PREFIX: "/mlflow-oidc-auth/"
+#
+# Azure Key Vault:
+#   config.data:
+#     CONFIG_AZURE_KEYVAULT_ENABLED: "true"
+#     CONFIG_AZURE_KEYVAULT_NAME: "my-keyvault"
+#
+# HashiCorp Vault:
+#   config.data:
+#     CONFIG_VAULT_ENABLED: "true"
+#     CONFIG_VAULT_ADDR: "https://vault.example.com:8200"
+#     CONFIG_VAULT_PATH: "secret/data/mlflow-oidc-auth"
+#   secretRefs:
+#     CONFIG_VAULT_TOKEN:
+#       name: vault-credentials
+#       key: token
 
 # -----------------------------------------------------------------
 # Service Account Configuration

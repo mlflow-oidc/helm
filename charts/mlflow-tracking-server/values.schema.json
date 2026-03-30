@@ -31,7 +31,8 @@
       "type": "object",
       "description": "Container image settings",
       "properties": {
-        "pullSecretsEnabled": { "type": "boolean", "default": false, "description": "Whether to use imagePullSecrets (ArgoCD values include this)" },
+        "pullSecretsEnabled": { "type": "boolean", "default": false, "description": "Whether to use imagePullSecrets" },
+        "pullSecrets": { "type": "array", "items": { "type": "string" }, "description": "List of pull secret names" },
         "registry": { "type": "string", "default": "ghcr.io/mlflow-oidc" },
         "name": { "type": "string", "default": "mlflow-tracking-server" },
         "tag": { "type": "string", "default": "latest" },
@@ -40,21 +41,37 @@
       "additionalProperties": true
     },
 
+    "args": {
+      "type": "array",
+      "description": "Container entrypoint arguments",
+      "items": { "type": "string" },
+      "default": ["mlflow", "server", "--app-name", "oidc-auth"]
+    },
+
+    "command": {
+      "type": "array",
+      "description": "Override container entrypoint command",
+      "items": { "type": "string" }
+    },
+
     "config": {
       "type": "object",
       "description": "Configuration values rendered into the server ConfigMap (env-style)",
       "properties": {
+        "port": { "type": "string", "default": "8080", "description": "Container port for the common library service and health check templates" },
         "data": {
           "type": "object",
           "description": "Key/value pairs for server config and environment variables (accepts arbitrary keys)",
           "properties": {
             "MLFLOW_HOST": { "type": "string", "default": "0.0.0.0" },
             "MLFLOW_PORT": { "type": "string", "default": "8080" },
+            "MLFLOW_WORKERS": { "type": ["string", "null"], "default": null },
             "MLFLOW_DEFAULT_ARTIFACT_ROOT": { "type": "string", "default": "mlflow-artifacts:/" },
             "MLFLOW_SERVE_ARTIFACTS": { "type": "string", "default": "true" },
             "MLFLOW_ARTIFACTS_DESTINATION": { "type": "string", "default": "/mlflow-data" },
             "MLFLOW_SERVER_ALLOWED_HOSTS": { "type": ["string", "null"], "default": null },
             "MLFLOW_UVICORN_OPTS": { "type": ["string", "null"], "default": null },
+            "MLFLOW_GUNICORN_OPTS": { "type": ["string", "null"], "default": null },
             "MLFLOW_S3_ENDPOINT_URL": { "type": ["string", "null"], "default": null },
             "MLFLOW_S3_IGNORE_TLS": { "type": ["boolean", "string", "null"], "default": null },
             "OIDC_DISCOVERY_URL": { "type": "string", "default": "https://your-oidc-provider/.well-known/openid-configuration" },
@@ -62,6 +79,7 @@
             "OIDC_SCOPE": { "type": "string", "default": "openid,profile,email,groups" },
             "OIDC_GROUPS_ATTRIBUTE": { "type": "string", "default": "groups" },
             "OIDC_REDIRECT_URI": { "type": ["string", "null"], "default": null },
+            "OIDC_AUDIENCE": { "type": ["string", "null"], "default": null, "description": "JWT audience validation (recommended for production)" },
             "OIDC_GROUP_NAME": { "type": "string", "default": "mlflow-users" },
             "OIDC_ADMIN_GROUP_NAME": { "type": "string", "default": "mlflow-admins" },
             "DEFAULT_MLFLOW_PERMISSION": { "type": "string", "default": "MANAGE" },
@@ -70,8 +88,32 @@
             "EXTEND_MLFLOW_MENU": { "type": "string", "default": "true" },
             "DEFAULT_LANDING_PAGE_IS_PERMISSIONS": { "type": "string", "default": "true" },
             "AUTOMATIC_LOGIN_REDIRECT": { "type": "string", "default": "false" },
+            "TRUSTED_PROXIES": { "type": ["string", "null"], "default": null, "description": "Comma-separated trusted proxy CIDRs" },
+            "OIDC_GEN_AI_GATEWAY_ENABLED": { "type": ["string", "null"], "default": null, "description": "Enable AI Gateway permissions" },
+            "MLFLOW_ENABLE_WORKSPACES": { "type": ["string", "null"], "default": null, "description": "Enable multi-tenant workspaces (requires MLflow >=3.10)" },
+            "OIDC_WORKSPACE_DEFAULT_PERMISSION": { "type": ["string", "null"], "default": null },
+            "OIDC_WORKSPACE_CLAIM_NAME": { "type": ["string", "null"], "default": null },
+            "OIDC_WORKSPACE_DETECTION_PLUGIN": { "type": ["string", "null"], "default": null },
+            "WORKSPACE_CACHE_MAX_SIZE": { "type": ["string", "null"], "default": null },
+            "WORKSPACE_CACHE_TTL_SECONDS": { "type": ["string", "null"], "default": null },
+            "OIDC_JWKS_CACHE_TTL_SECONDS": { "type": ["string", "null"], "default": null },
+            "PERMISSION_CACHE_TTL_SECONDS": { "type": ["string", "null"], "default": null },
+            "CACHE_BACKEND": { "type": ["string", "null"], "default": null, "description": "Cache backend: local or redis" },
+            "CACHE_KEY_PREFIX": { "type": ["string", "null"], "default": null },
+            "CONFIG_AWS_SECRETS_ENABLED": { "type": ["string", "null"], "default": null },
+            "CONFIG_AWS_SECRETS_NAME": { "type": ["string", "null"], "default": null },
+            "CONFIG_AWS_SECRETS_REGION": { "type": ["string", "null"], "default": null },
+            "CONFIG_AWS_PARAMETER_STORE_ENABLED": { "type": ["string", "null"], "default": null },
+            "CONFIG_AWS_PARAMETER_STORE_PREFIX": { "type": ["string", "null"], "default": null },
+            "CONFIG_AZURE_KEYVAULT_ENABLED": { "type": ["string", "null"], "default": null },
+            "CONFIG_AZURE_KEYVAULT_NAME": { "type": ["string", "null"], "default": null },
+            "CONFIG_VAULT_ENABLED": { "type": ["string", "null"], "default": null },
+            "CONFIG_VAULT_ADDR": { "type": ["string", "null"], "default": null },
+            "CONFIG_VAULT_PATH": { "type": ["string", "null"], "default": null },
+            "CONFIG_VAULT_NAMESPACE": { "type": ["string", "null"], "default": null },
             "OIDC_ALEMBIC_VERSION_TABLE": { "type": "string", "default": "alembic_version" },
-            "LOG_LEVEL": { "type": "string", "default": "INFO" }
+            "LOG_LEVEL": { "type": "string", "default": "INFO" },
+            "LOGGING_LOGGER_NAME": { "type": ["string", "null"], "default": null }
           },
           "patternProperties": {
             "^.*$": { "type": ["string", "boolean", "number", "array", "object", "null"] }
@@ -84,7 +126,7 @@
 
     "secrets": {
       "type": "object",
-      "description": "External secret configuration",
+      "description": "External secret configuration (bulk injection)",
       "properties": {
         "externalSecretName": { "type": "string", "default": "" },
         "mountAsFiles": {
@@ -97,6 +139,38 @@
         }
       },
       "additionalProperties": false
+    },
+
+    "secretRefs": {
+      "type": "object",
+      "description": "Inject individual env vars from Kubernetes Secret keys via valueFrom.secretKeyRef. Map of ENV_VAR_NAME to {name, key}.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Kubernetes Secret name" },
+          "key": { "type": "string", "description": "Key within the Secret" }
+        },
+        "required": ["name", "key"],
+        "additionalProperties": false
+      }
+    },
+
+    "env": {
+      "type": "array",
+      "description": "Additional env vars with full Kubernetes env spec (valueFrom, etc.)",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+
+    "envFrom": {
+      "type": "array",
+      "description": "Override envFrom for the container (replaces default configMapRef + shared configs/secrets)",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
     },
 
     "serviceAccount": {
@@ -140,9 +214,41 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean", "default": true },
-        "liveness": { "type": "object", "properties": { "path": { "type": "string", "default": "health/live" } }, "additionalProperties": false },
-        "readiness": { "type": "object", "properties": { "path": { "type": "string", "default": "health/ready" } }, "additionalProperties": false },
-        "startup": { "type": "object", "properties": { "path": { "type": "string", "default": "health/ready" } }, "additionalProperties": false }
+        "kind": { "type": "string", "enum": ["http", "tcp", "disabled"], "default": "http", "description": "Health check type: http (default), tcp, or disabled" },
+        "liveness": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "default": "health/live" },
+            "disabled": { "type": "boolean" },
+            "initialDelaySeconds": { "type": "integer" },
+            "timeoutSeconds": { "type": "integer" },
+            "periodSeconds": { "type": "integer" },
+            "failureThreshold": { "type": "integer" }
+          },
+          "additionalProperties": false
+        },
+        "readiness": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "default": "health/ready" },
+            "disabled": { "type": "boolean" },
+            "initialDelaySeconds": { "type": "integer" },
+            "timeoutSeconds": { "type": "integer" },
+            "periodSeconds": { "type": "integer" },
+            "failureThreshold": { "type": "integer" }
+          },
+          "additionalProperties": false
+        },
+        "startup": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "default": "health/ready" },
+            "disabled": { "type": "boolean" },
+            "failureThreshold": { "type": "integer" },
+            "periodSeconds": { "type": "integer" }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },
@@ -152,10 +258,31 @@
       "properties": {
         "runAsUser": { "type": "integer", "default": 1000 },
         "runAsGroup": { "type": "integer", "default": 1000 },
-        "fsGroup": { "type": "integer", "default": 1000 }
+        "fsGroup": { "type": "integer", "default": 1000 },
+        "runAsNonRoot": { "type": "boolean", "default": true }
       },
       "additionalProperties": false
     },
+
+    "volumes": {
+      "type": "array",
+      "description": "Additional volumes to add to the pod spec",
+      "items": { "type": "object", "additionalProperties": true }
+    },
+
+    "volumeMounts": {
+      "type": "array",
+      "description": "Additional volume mounts for the container",
+      "items": { "type": "object", "additionalProperties": true }
+    },
+
+    "deploymentStrategy": {
+      "type": "string",
+      "enum": ["RollingUpdate", "Recreate"],
+      "default": "RollingUpdate",
+      "description": "Deployment strategy type"
+    },
+
     "global": {
       "type": "object",
       "description": "Helm global values (inherited from parent charts or CLI).",
