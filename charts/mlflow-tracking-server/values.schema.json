@@ -35,7 +35,7 @@
         "pullSecrets": { "type": "array", "items": { "type": "string" }, "description": "List of pull secret names" },
         "registry": { "type": "string", "default": "ghcr.io/mlflow-oidc" },
         "name": { "type": "string", "default": "mlflow-tracking-server" },
-        "tag": { "type": "string", "default": "latest" },
+        "tag": { "type": "string", "description": "Image tag. Defaults to Chart.appVersion when omitted." },
         "pullPolicy": { "type": "string", "enum": ["IfNotPresent", "Always", "Never"], "default": "IfNotPresent" }
       },
       "additionalProperties": true

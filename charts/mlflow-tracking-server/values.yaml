@@ -10,7 +10,8 @@ image:
   # pullSecretsEnabled: true
   registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
-  tag: latest
+  # tag defaults to Chart.appVersion (currently 7.0.0) when omitted
+  # tag: "7.0.0"
   pullPolicy: IfNotPresent
 
 # MLflow server startup arguments

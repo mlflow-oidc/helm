@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag | default (include "common.chart.appVersion" .) }}"
           imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
           {{- with .Values.args }}
           args:

@@ -404,7 +404,7 @@ replicas: 2
 image:
   registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
-  tag: "latest"
+  # tag defaults to appVersion (7.0.0)
 
 config:
   data:
