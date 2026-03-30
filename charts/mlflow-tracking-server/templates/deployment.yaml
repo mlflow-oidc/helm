@@ -4,20 +4,15 @@
 {{- $secrets := default (dict) .Values.secrets -}}
 {{- $mountAsFiles := default (dict) $secrets.mountAsFiles -}}
 {{- /*
-  The common library's container.tpl handles:
-  - image, ports, args, command (from .Values.args, .Values.command)
-  - envFrom (configMapRef + shared configs/secrets)
-  - env (.Values.env)
-  - secretRefs (.Values.secretRefs → valueFrom.secretKeyRef)
-  - health checks (.Values.healthCheck)
-  - resources (.Values.resources)
-  - volumeMounts (.Values.volumeMounts)
-  
-  We only need to override for:
-  1. secrets.externalSecretName (bulk secretRef in envFrom) — when NOT mounting as files
-  2. secrets.mountAsFiles (volume + volumeMount + env vars) — K8s secrets provider
+  Override the deployment only when secrets features require it:
+  - secrets.externalSecretName adds a secretRef to envFrom
+  - secrets.mountAsFiles adds env vars, volumeMount, and volume
+
+  When neither is set, the common library handles everything natively
+  (image, ports, args, envFrom, env, secretRefs, health checks, resources,
+  volumeMounts, volumes).
 */ -}}
-{{- if or (and $secrets.externalSecretName (not $mountAsFiles.enabled)) (and $secrets.externalSecretName $mountAsFiles.enabled) }}
+{{- if $secrets.externalSecretName }}
 spec:
   template:
     spec:
@@ -25,6 +20,10 @@ spec:
         - name: app
           image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag | default (include "common.chart.appVersion" .) }}"
           imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
+          {{- with .Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.args }}
           args:
             {{- toYaml . | nindent 12 }}
@@ -33,12 +32,23 @@ spec:
             - name: {{ default "http" .Values.config.portName }}
               containerPort: {{ default "8080" .Values.config.port }}
               protocol: TCP
-          {{- if $mountAsFiles.enabled }}
+          envFrom:
+            - configMapRef:
+                name: {{ template "common.fullname" . }}
+            {{- if not $mountAsFiles.enabled }}
+            - secretRef:
+                name: {{ $secrets.externalSecretName }}
+            {{- end }}
+            {{ include "common.envvar.shared.configs" . | indent 12 }}
+            {{ include "common.envvar.shared.secrets" . | indent 12 }}
+          {{- if or $mountAsFiles.enabled .Values.env .Values.secretRefs }}
           env:
+            {{- if $mountAsFiles.enabled }}
             - name: CONFIG_K8S_SECRETS_ENABLED
               value: "true"
             - name: CONFIG_K8S_SECRETS_PATH
               value: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" | quote }}
+            {{- end }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -49,60 +59,32 @@ spec:
                   name: {{ $ref.name }}
                   key: {{ $ref.key }}
             {{- end }}
-          envFrom:
-            - configMapRef:
-                name: {{ template "common.fullname" . }}
-            {{ include "common.envvar.shared.configs" . | indent 12 }}
-            {{ include "common.envvar.shared.secrets" . | indent 12 }}
-          volumeMounts:
-            - name: mlflow-secrets
-              mountPath: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" }}
-              readOnly: true
-            {{- with .Values.volumeMounts }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-          {{- else }}
-          {{- /* Not mounting as files — inject external secret as envFrom */}}
-          {{- if or .Values.env .Values.secretRefs }}
-          env:
-            {{- with .Values.env }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-            {{- range $envName, $ref := .Values.secretRefs }}
-            - name: {{ $envName }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $ref.name }}
-                  key: {{ $ref.key }}
-            {{- end }}
-          {{- end }}
-          envFrom:
-            - configMapRef:
-                name: {{ template "common.fullname" . }}
-            - secretRef:
-                name: {{ $secrets.externalSecretName }}
-            {{ include "common.envvar.shared.configs" . | indent 12 }}
-            {{ include "common.envvar.shared.secrets" . | indent 12 }}
-          {{- with .Values.volumeMounts }}
-          volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
           {{- end }}
           {{- $healthCheck := default (dict) .Values.healthCheck -}}
-          {{- if eq $healthCheck.kind "tcp" }}
+          {{- if eq (default "" $healthCheck.kind) "tcp" }}
           {{ include "common.healthcheck.liveness.tcp" . | nindent 10 }}
           {{ include "common.healthcheck.readiness.tcp" . | nindent 10 }}
           {{ include "common.healthcheck.startup.tcp" . | nindent 10 }}
-          {{- else if eq $healthCheck.kind "disabled" }}
-          {{- else }}
+          {{- else if ne (default "" $healthCheck.kind) "disabled" }}
           {{ include "common.healthcheck.liveness" . | nindent 10 }}
           {{ include "common.healthcheck.readiness" . | nindent 10 }}
           {{ include "common.healthcheck.startup" . | nindent 10 }}
           {{- end }}
           {{ include "common.resources" . | nindent 10 }}
-      {{- if or (and $secrets.externalSecretName $mountAsFiles.enabled) .Values.volumes }}
+          {{- if or $mountAsFiles.enabled .Values.volumeMounts }}
+          volumeMounts:
+            {{- if $mountAsFiles.enabled }}
+            - name: mlflow-secrets
+              mountPath: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" }}
+              readOnly: true
+            {{- end }}
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- if or $mountAsFiles.enabled .Values.volumes }}
       volumes:
-        {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
+        {{- if $mountAsFiles.enabled }}
         - name: mlflow-secrets
           secret:
             secretName: {{ $secrets.externalSecretName }}
