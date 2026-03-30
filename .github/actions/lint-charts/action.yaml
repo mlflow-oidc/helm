@@ -8,6 +8,13 @@ inputs:
     description: Fail on first lint error
     required: false
     default: "true"
+outputs:
+  success:
+    description: Whether all charts passed lint
+    value: ${{ steps.lint.outputs.success }}
+  report:
+    description: JSON lint report
+    value: ${{ steps.lint.outputs.report }}
 runs:
   using: "composite"
   steps:

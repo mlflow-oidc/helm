@@ -1,67 +1,97 @@
+{{- include "application.validateRedis" . -}}
 {{- template "common.deployment" (list . "application.deployment") -}}
 {{- define "application.deployment" -}}
-{{- $fullname := include "common.fullname" . -}}
-{{- $config := default (dict) .Values.config -}}
-{{- $configData := default (dict) $config.data -}}
-{{- $persistence := default (dict) .Values.persistence -}}
 {{- $secrets := default (dict) .Values.secrets -}}
 {{- $mountAsFiles := default (dict) $secrets.mountAsFiles -}}
-{{- $volumePermissions := default (dict) $persistence.volumePermissions -}}
-{{- $volumePermissionsEnabled := ternary $volumePermissions.enabled true (hasKey $volumePermissions "enabled") -}}
-{{- $volumePermissionsRunAsUser := ternary $volumePermissions.runAsUser 0 (hasKey $volumePermissions "runAsUser") -}}
-{{- $healthCheck := default (dict) .Values.healthCheck -}}
+{{- /*
+  Override the deployment only when secrets features require it:
+  - secrets.externalSecretName adds a secretRef to envFrom
+  - secrets.mountAsFiles adds env vars, volumeMount, and volume
+
+  When neither is set, the common library handles everything natively
+  (image, ports, args, envFrom, env, secretRefs, health checks, resources,
+  volumeMounts, volumes).
+*/ -}}
+{{- if $secrets.externalSecretName }}
 spec:
   template:
     spec:
       containers:
         - name: app
-          ports:
-          - name: http
-            containerPort: {{ $configData.MLFLOW_PORT | default 8080 }}
-            protocol: TCP
-          image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag | default (include "common.chart.appVersion" .) }}"
           imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
-          args:
-            - mlflow
-            - server
-            - --app-name
-            - oidc-auth
-          {{- if eq $healthCheck.enabled true }}
-          {{ include "common.healthcheck.liveness" . | nindent 10 }}
-          {{ include "common.healthcheck.readiness" . | nindent 10 }}
-          {{ include "common.healthcheck.startup" . | nindent 10 }}
+          {{- with .Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: {{ default "http" .Values.config.portName }}
+              containerPort: {{ default "8080" .Values.config.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ template "common.fullname" . }}
+            {{- if not $mountAsFiles.enabled }}
+            - secretRef:
+                name: {{ $secrets.externalSecretName }}
+            {{- end }}
+            {{ include "common.envvar.shared.configs" . | indent 12 }}
+            {{ include "common.envvar.shared.secrets" . | indent 12 }}
+          {{- if or $mountAsFiles.enabled .Values.env .Values.secretRefs }}
           env:
-            {{- /* Enable Kubernetes secrets provider when mounting secrets as files */}}
             {{- if $mountAsFiles.enabled }}
             - name: CONFIG_K8S_SECRETS_ENABLED
               value: "true"
             - name: CONFIG_K8S_SECRETS_PATH
               value: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" | quote }}
             {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- range $envName, $ref := .Values.secretRefs }}
+            - name: {{ $envName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $ref.name }}
+                  key: {{ $ref.key }}
+            {{- end }}
+          {{- end }}
+          {{- $healthCheck := default (dict) .Values.healthCheck -}}
+          {{- if eq (default "" $healthCheck.kind) "tcp" }}
+          {{ include "common.healthcheck.liveness.tcp" . | nindent 10 }}
+          {{ include "common.healthcheck.readiness.tcp" . | nindent 10 }}
+          {{ include "common.healthcheck.startup.tcp" . | nindent 10 }}
+          {{- else if ne (default "" $healthCheck.kind) "disabled" }}
+          {{ include "common.healthcheck.liveness" . | nindent 10 }}
+          {{ include "common.healthcheck.readiness" . | nindent 10 }}
+          {{ include "common.healthcheck.startup" . | nindent 10 }}
+          {{- end }}
+          {{ include "common.resources" . | nindent 10 }}
+          {{- if or $mountAsFiles.enabled .Values.volumeMounts }}
           volumeMounts:
-            {{- /* Mount secrets as files for K8s secrets provider */}}
-            {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
+            {{- if $mountAsFiles.enabled }}
             - name: mlflow-secrets
               mountPath: {{ $mountAsFiles.path | default "/var/run/secrets/mlflow-oidc-auth" }}
               readOnly: true
             {{- end }}
-          envFrom:
-            - configMapRef:
-                name: {{ template "common.fullname" . }}
-            {{- /* Reference external secret as environment variables (when not mounting as files) */}}
-            {{- if and $secrets.externalSecretName (not $mountAsFiles.enabled) }}
-            - secretRef:
-                name: {{ $secrets.externalSecretName }}
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{ include "common.envvar.shared.configs" . | indent 12 }}
-            {{ include "common.envvar.shared.secrets" . | indent 12 }}
-          {{ include "common.resources" . | nindent 10 }}
+          {{- end }}
+      {{- if or $mountAsFiles.enabled .Values.volumes }}
       volumes:
-        {{- /* Secret volume for K8s secrets provider */}}
-        {{- if and $secrets.externalSecretName $mountAsFiles.enabled }}
+        {{- if $mountAsFiles.enabled }}
         - name: mlflow-secrets
           secret:
             secretName: {{ $secrets.externalSecretName }}
         {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+{{- end }}
 {{- end -}}
