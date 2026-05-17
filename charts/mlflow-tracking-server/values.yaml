@@ -152,7 +152,7 @@ secrets:
   #   - OIDC_CLIENT_SECRET: OAuth client secret
   #   - OIDC_USERS_DB_URI: Auth database connection string
   #   - MLFLOW_BACKEND_STORE_URI: MLflow tracking database URI
-  externalSecretName: ""
+  externalSecretName: "ke"
 
   # Mount secrets as files for Kubernetes secrets provider
   # When enabled, mlflow-oidc-auth reads secrets from mounted files
