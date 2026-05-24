@@ -279,6 +279,18 @@ healthCheck:
     path: health/ready
 
 securityContext:
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: true
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
