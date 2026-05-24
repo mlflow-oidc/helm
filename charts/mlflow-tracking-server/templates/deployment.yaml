@@ -1,3 +1,4 @@
+
 {{- include "application.validateRedis" . -}}
 {{- template "common.deployment" (list . "application.deployment") -}}
 {{- define "application.deployment" -}}
@@ -16,6 +17,7 @@
 spec:
   template:
     spec:
+      {{- include "common.security.podContext" . | nindent 6 }}
       containers:
         - name: app
           image: "{{ default "ghcr.io/mlflow-oidc" .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag | default (include "common.chart.appVersion" .) }}"
@@ -32,6 +34,7 @@ spec:
             - name: {{ default "http" .Values.config.portName }}
               containerPort: {{ default "8080" .Values.config.port }}
               protocol: TCP
+          {{- include "common.security.containerContext" . | nindent 10 }}
           envFrom:
             - configMapRef:
                 name: {{ template "common.fullname" . }}

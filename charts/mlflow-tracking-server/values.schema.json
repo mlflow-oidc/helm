@@ -259,9 +259,70 @@
         "runAsUser": { "type": "integer", "default": 1000 },
         "runAsGroup": { "type": "integer", "default": 1000 },
         "fsGroup": { "type": "integer", "default": 1000 },
-        "runAsNonRoot": { "type": "boolean", "default": true }
+        "runAsNonRoot": { "type": "boolean", "default": true },
+        "seccompProfile": {
+          "type": "object",
+          "description": "Seccomp profile for the pod (CIS requirement)",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "RuntimeDefault",
+                "Localhost",
+                "Unconfined"
+              ],
+              "default": "RuntimeDefault"
+            },
+            "localhostProfile": {
+              "type": "string"
+            }
+          }
+        }
       },
-      "additionalProperties": false
+      "additionalProperties": true
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "description": "Container-level security context (spec.containers[].securityContext)",
+      "properties": {
+        "allowPrivilegeEscalation": {"type": "boolean", "default": false },
+        "readOnlyRootFilesystem": {"type": "boolean", "default": true },
+        "runAsNonRoot": {"type": "boolean", "default": true},
+        "runAsUser": {"type": "integer", "default": 1000 },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "drop": {
+              "type": "array",
+              "items": {"type": "string"},
+              "default": ["ALL"]
+            },
+            "add": {"type": "array","items": {"type": "string"}
+            }
+          },
+          "additionalProperties": false
+        },
+        "seccompProfile": {
+          "type": "object",
+          "description": "Seccomp profile for the container (CIS requirement)",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "RuntimeDefault",
+                "Localhost",
+                "Unconfined"
+              ],
+              "default": "RuntimeDefault"
+            },
+            "localhostProfile": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
     },
 
     "volumes": {
