@@ -1,0 +1,134 @@
+name: update-app-version
+
+# Keeps mlflow-tracking-server's appVersion (its default image tag) on the newest mlflow-oidc-auth
+# release that has an image, by opening a pull request.
+#
+# Holds: no untrusted input (schedule / manual only; the only external data is the tag list of our
+# own image repository, and only plain X.Y.Z tags are accepted), a GITHUB_TOKEN scoped to pushing a
+# branch and opening a pull request. Nothing is released from here: the pull request is reviewed and
+# merged by a person, and release.yaml re-checks the image before publishing.
+on:
+  schedule:
+    # After the image repository's nightly build (00:00 UTC).
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-app-version
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      CHART: mlflow-tracking-server
+      CHART_DIR: charts/mlflow-tracking-server
+      IMAGE_REPO: ${{ github.repository_owner }}/mlflow-tracking-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Find the newest plugin release with an image
+        id: versions
+        shell: bash
+        run: |
+          set -eo pipefail
+          token=$(curl -fsSL "https://ghcr.io/token?scope=repository:${IMAGE_REPO}:pull" | jq -r .token)
+          url="https://ghcr.io/v2/${IMAGE_REPO}/tags/list?n=1000"
+          : > tags.txt
+          while [ -n "$url" ]; do
+            curl -fsSL -D headers.txt -H "Authorization: Bearer ${token}" "$url" | jq -r '.tags[]?' >> tags.txt
+            next=$(grep -i '^link:' headers.txt | sed -E 's/.*<([^>]+)>.*/\1/' | tr -d '\r' || true)
+            url=${next:+https://ghcr.io${next}}
+          done
+          latest=$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' tags.txt | sort -V | tail -n1 || true)
+          current=$(awk -F'"' '/^appVersion:/ {print $2; exit}' "${CHART_DIR}/Chart.yaml")
+          echo "Newest plugin-version image tag: ${latest:-none}; chart appVersion: ${current}"
+          newer=false
+          if [ -n "$latest" ] && [ "$latest" != "$current" ] && [ "$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -n1)" = "$latest" ]; then
+            newer=true
+          fi
+          {
+            echo "latest=${latest}"
+            echo "current=${current}"
+            echo "newer=${newer}"
+            echo "major=$([ "${latest%%.*}" != "${current%%.*}" ] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Skip if a pull request is already open for this version
+        id: branch
+        if: steps.versions.outputs.newer == 'true'
+        shell: bash
+        env:
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: |
+          branch="chore/${CHART}-app-version-${LATEST}"
+          echo "name=${branch}" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump the chart
+        id: bump
+        if: steps.versions.outputs.newer == 'true' && steps.branch.outputs.exists == 'false'
+        shell: bash
+        env:
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: |
+          version=$(python3 .github/scripts/bump_app_version.py "$CHART_DIR" "$LATEST")
+          echo "chart_version=${version}" >> "$GITHUB_OUTPUT"
+          if ! (cd "$CHART_DIR" && helm dependency build >/dev/null 2>&1); then
+            (cd "$CHART_DIR" && helm dependency update >/dev/null)
+          fi
+          helm lint "$CHART_DIR"
+
+      # Pull requests opened with GITHUB_TOKEN do not start other workflows, so validate.yml will
+      # not run on this one: run its checks here instead.
+      - name: Check the default image exists
+        if: steps.bump.outcome == 'success'
+        uses: ./.github/actions/check-images
+        with:
+          charts_json: '[{"name":"mlflow-tracking-server","path":"charts/mlflow-tracking-server"}]'
+
+      - name: Open a pull request
+        if: steps.bump.outcome == 'success'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ steps.versions.outputs.latest }}
+          CURRENT: ${{ steps.versions.outputs.current }}
+          MAJOR: ${{ steps.versions.outputs.major }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          CHART_VERSION: ${{ steps.bump.outputs.chart_version }}
+        run: |
+          set -eo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add "$CHART_DIR"
+          git commit -m "feat: update ${CHART} chart to v${CHART_VERSION} for mlflow-oidc-auth ${LATEST}"
+          git push origin "$BRANCH"
+          note="A patch or minor plugin release: no chart changes are expected."
+          if [ "$MAJOR" = "true" ]; then
+            note="**A new plugin major version (${CURRENT} to ${LATEST}).** It can have breaking changes: read the plugin's release notes and upgrade checklist, update the chart (values, README upgrade notes, the changes annotation) as needed, and only then merge."
+          fi
+          # Needs "Allow GitHub Actions to create and approve pull requests" (Settings > Actions >
+          # General). Without it the branch is still pushed and the run links to it.
+          gh pr create --base main --head "$BRANCH" \
+            --title "feat: update ${CHART} chart to v${CHART_VERSION} for mlflow-oidc-auth ${LATEST}" \
+            --body "$(printf '%s\n\n%s\n\n%s\n' \
+              "Moves \`appVersion\` (the default image tag) from \`${CURRENT}\` to \`${LATEST}\` and the chart to \`${CHART_VERSION}\`. Opened by \`update-app-version.yaml\`." \
+              "$note" \
+              "Checked in the workflow run, because pull requests opened by GitHub Actions do not start \`validate.yml\`: \`helm lint\` passed and \`ghcr.io/${IMAGE_REPO}:${LATEST}\` exists.")" \
+            || echo "::warning title=Pull request not opened::Branch ${BRANCH} is pushed; open it at ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/main...${BRANCH}?expand=1 (or allow GitHub Actions to create pull requests in the repository settings)"

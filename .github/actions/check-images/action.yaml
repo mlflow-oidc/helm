@@ -1,0 +1,41 @@
+name: Check Images
+description: >-
+  Render each chart with its default values and fail when an image it references cannot be found
+  in its registry. A chart whose default image does not exist installs into ImagePullBackOff, and
+  Artifact Hub reports it as "image not found". Requires `charts_json` (from `list-charts`).
+inputs:
+  charts_json:
+    description: JSON array of charts (from list-charts). Must be provided.
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Check that every default image exists
+      shell: bash
+      env:
+        CHARTS_JSON: ${{ inputs.charts_json }}
+      run: |
+        set -eo pipefail
+        missing=0
+        for row in $(echo "$CHARTS_JSON" | jq -c '.[]'); do
+          name=$(echo "$row" | jq -r '.name')
+          path=$(echo "$row" | jq -r '.path')
+          (cd "$path" && (helm dependency build >/dev/null 2>&1 || helm dependency update >/dev/null 2>&1)) || true
+          images=$(helm template image-check "$path" \
+            | grep -E '^[[:space:]]*(- )?image:' \
+            | sed -E 's/^[[:space:]]*(- )?image:[[:space:]]*//; s/["'"'"']//g' \
+            | sort -u)
+          if [ -z "$images" ]; then
+            echo "$name: renders no image"
+            continue
+          fi
+          for image in $images; do
+            if docker buildx imagetools inspect "$image" >/dev/null 2>&1; then
+              echo "$name: $image exists"
+            else
+              echo "::error title=Image not found::$name renders $image, which does not exist in its registry"
+              missing=1
+            fi
+          done
+        done
+        exit $missing

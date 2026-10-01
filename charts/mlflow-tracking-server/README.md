@@ -88,7 +88,7 @@ helm install mlflow ./charts/mlflow-tracking-server \
 |-----------|-------------|---------|
 | `OIDC_GROUP_NAME` | Allowed groups (comma-separated) | `mlflow-users` |
 | `OIDC_ADMIN_GROUP_NAME` | Admin groups (comma-separated) | `mlflow-admins` |
-| `DEFAULT_MLFLOW_PERMISSION` | Default permission level | `MANAGE` |
+| `DEFAULT_MLFLOW_PERMISSION` | Permission on resources nobody granted the user anything on. Anything but `NO_PERMISSIONS` opens them to every signed-in user | `NO_PERMISSIONS` |
 | `PERMISSION_SOURCE_ORDER` | Permission resolution order | `user,group,regex,group-regex` |
 
 **Permission Levels:** `NO_PERMISSIONS`, `READ`, `USE`, `EDIT`, `MANAGE`
@@ -404,7 +404,7 @@ replicas: 2
 image:
   registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
-  # tag defaults to appVersion (7.0.0)
+  # tag defaults to appVersion (9.0.0)
 
 config:
   data:
@@ -471,6 +471,32 @@ healthCheck:
   startup:
     path: health/ready
 ```
+
+## Image tags
+
+The chart's image tag defaults to its `appVersion`, which is the mlflow-oidc-auth release it targets (currently `9.0.0`).
+The [image repository](https://github.com/mlflow-oidc/mlflow-tracking-server-docker) publishes every build under three tags:
+
+| Tag | Example | Moves? |
+|---|---|---|
+| plugin version | `9.0.0` | Yes, to each rebuild of that release (a new MLflow, a refreshed base image). The chart's default. |
+| MLflow, plugin and build date | `3.16.1-9.0.0-20261002` | Never. Set `image.tag` to this for reproducible deployments. |
+| `latest` | `latest` | Yes, to every build. Not recommended. |
+
+When a new plugin release is published, a scheduled workflow opens a pull request here that moves `appVersion` to it.
+
+## Upgrading
+
+### 3.x to 4.0.0
+
+- **mlflow-oidc-auth 9.0.0 has breaking changes.** Read the plugin's
+  [upgrade checklist](https://github.com/mlflow-oidc/mlflow-oidc-auth/blob/main/docs/configuration.md) before upgrading, in particular:
+  - it requires MLflow 3.16.0 or later, which the image provides;
+  - with workspaces enabled, existing grants are assigned a workspace when the server starts;
+  - every existing service account starts accepting only plugin-issued tokens until an administrator binds it to an identity provider.
+- **`DEFAULT_MLFLOW_PERMISSION` now defaults to `NO_PERMISSIONS`** instead of `MANAGE`. Users only reach what they, or a group they belong to, have been granted.
+  To keep the old behaviour, set `config.data.DEFAULT_MLFLOW_PERMISSION: "MANAGE"` explicitly. That gives every signed-in user `MANAGE` on everything nobody granted them anything on.
+- **The default image tag works again.** Chart 3.0.0 defaulted to the tag `7.0.0`, which was never published. If you set `image.tag` to work around that, you can remove it.
 
 ## Signature validation
 

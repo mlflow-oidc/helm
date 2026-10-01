@@ -82,7 +82,7 @@
             "OIDC_AUDIENCE": { "type": ["string", "null"], "default": null, "description": "JWT audience validation (recommended for production)" },
             "OIDC_GROUP_NAME": { "type": "string", "default": "mlflow-users" },
             "OIDC_ADMIN_GROUP_NAME": { "type": "string", "default": "mlflow-admins" },
-            "DEFAULT_MLFLOW_PERMISSION": { "type": "string", "default": "MANAGE" },
+            "DEFAULT_MLFLOW_PERMISSION": { "type": "string", "default": "NO_PERMISSIONS" },
             "PERMISSION_SOURCE_ORDER": { "type": ["string", "null"], "default": null },
             "OIDC_GROUP_DETECTION_PLUGIN": { "type": ["string", "null"], "default": null },
             "EXTEND_MLFLOW_MENU": { "type": "string", "default": "true" },

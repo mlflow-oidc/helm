@@ -47,6 +47,11 @@ jobs:
           charts_json: ${{ steps.list_charts.outputs.charts }}
           fail_fast: "true"
 
+      - name: Check default images exist
+        uses: ./.github/actions/check-images
+        with:
+          charts_json: ${{ steps.list_charts.outputs.charts }}
+
       - name: Find charts to release
         id: find_charts
         uses: ./.github/actions/find-charts-to-release

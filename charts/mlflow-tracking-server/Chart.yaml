@@ -3,8 +3,8 @@ name: mlflow-tracking-server
 description: A Helm chart for MlFlow Tracking Server
 icon: https://raw.githubusercontent.com/mlflow-oidc/mlflow-oidc-auth/refs/heads/main/web-react/public/favicon.svg
 type: application
-version: 3.0.0
-appVersion: "7.0.0"
+version: 4.0.0
+appVersion: "9.0.0"
 home: https://github.com/mlflow-oidc/helm
 sources:
   - https://github.com/mlflow-oidc/helm
@@ -17,3 +17,11 @@ dependencies:
   - name: common
     repository: oci://ghcr.io/technicaldomain/helm
     version: 2.2.0
+annotations:
+  artifacthub.io/changes: |
+    - kind: changed
+      description: Default to mlflow-oidc-auth 9.0.0 (image tag 9.0.0), which has breaking changes; see the chart README's upgrade notes
+    - kind: fixed
+      description: The default image tag now exists; chart 3.0.0 defaulted to 7.0.0, which was never published
+    - kind: security
+      description: DEFAULT_MLFLOW_PERMISSION now defaults to NO_PERMISSIONS, the plugin's own default, instead of MANAGE
