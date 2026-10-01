@@ -474,14 +474,14 @@ healthCheck:
 
 ## Image tags
 
-The chart's `appVersion` is the mlflow-oidc-auth release it targets (currently `9.0.0`). Its default `image.tag` is one
+The chart's `appVersion` is the mlflow-oidc-auth release it targets (currently `9.0.2`). Its default `image.tag` is one
 immutable build of that release, `<mlflow>-<plugin>-<build date>`. The
 [image repository](https://github.com/mlflow-oidc/mlflow-tracking-server-docker) publishes every build under three tags:
 
 | Tag | Example | Moves? |
 |---|---|---|
-| MLflow, plugin and build date | `3.16.1-9.0.0-20261002` | Never. The chart's default. |
-| plugin version | `9.0.0` | Yes, to each rebuild of that release (a new MLflow, a refreshed base image). |
+| MLflow, plugin and build date | `3.16.1-9.0.2-20261001` | Never. The chart's default. |
+| plugin version | `9.0.2` | Yes, to each rebuild of that release (a new MLflow, a refreshed base image). |
 | `latest` | `latest` | Yes, to every build. Not recommended. |
 
 Because the default never moves, every node and every pod runs the same build. A moving tag would not give you that:
@@ -493,7 +493,7 @@ release arrives as a chart minor or major release. A scheduled workflow opens th
 
 ### 3.x to 4.0.0
 
-- **mlflow-oidc-auth 9.0.0 has breaking changes.** Read the plugin's
+- **mlflow-oidc-auth 9.0 has breaking changes.** Read the plugin's
   [upgrade checklist](https://github.com/mlflow-oidc/mlflow-oidc-auth/blob/main/docs/configuration.md) before upgrading, in particular:
   - it requires MLflow 3.16.0 or later, which the image provides;
   - with workspaces enabled, existing grants are assigned a workspace when the server starts;

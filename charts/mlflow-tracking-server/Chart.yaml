@@ -4,7 +4,7 @@ description: A Helm chart for MlFlow Tracking Server
 icon: https://raw.githubusercontent.com/mlflow-oidc/mlflow-oidc-auth/refs/heads/main/web-react/public/favicon.svg
 type: application
 version: 4.0.0
-appVersion: "9.0.0"
+appVersion: "9.0.2"
 home: https://github.com/mlflow-oidc/helm
 sources:
   - https://github.com/mlflow-oidc/helm
@@ -20,7 +20,7 @@ dependencies:
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: Default to mlflow-oidc-auth 9.0.0, which has breaking changes; see the chart README's upgrade notes
+      description: Default to mlflow-oidc-auth 9.0.2 (image 3.16.1-9.0.2-20261001); the 9.0 release has breaking changes; see the chart README's upgrade notes
     - kind: fixed
       description: The default image is an immutable build that exists; chart 3.0.0 defaulted to the tag 7.0.0, which was never published
     - kind: security
