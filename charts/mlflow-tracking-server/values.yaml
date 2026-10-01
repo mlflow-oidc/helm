@@ -10,10 +10,11 @@ image:
   # pullSecretsEnabled: true
   registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
-  # tag defaults to Chart.appVersion (currently 9.0.0), the image tag of that plugin release,
-  # which moves to each rebuild of it (new MLflow, refreshed base image). Pin an immutable tag
-  # such as "3.16.1-9.0.0-20261002" for reproducible deployments.
-  # tag: "9.0.0"
+  # The immutable build this chart release ships: <mlflow>-<plugin>-<build date>. Its plugin part is
+  # always the chart's appVersion. A new build (a new MLflow, a security rebuild) arrives as a chart
+  # patch release, so every node and every pod runs the same image. The moving tag "<plugin>"
+  # (e.g. "9.0.0") also exists, but a node that has it cached keeps the old build.
+  tag: ""
   pullPolicy: IfNotPresent
 
 # MLflow server startup arguments

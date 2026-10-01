@@ -404,7 +404,7 @@ replicas: 2
 image:
   registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
-  # tag defaults to appVersion (9.0.0)
+  # tag defaults to the immutable build this chart release ships
 
 config:
   data:
@@ -474,16 +474,20 @@ healthCheck:
 
 ## Image tags
 
-The chart's image tag defaults to its `appVersion`, which is the mlflow-oidc-auth release it targets (currently `9.0.0`).
-The [image repository](https://github.com/mlflow-oidc/mlflow-tracking-server-docker) publishes every build under three tags:
+The chart's `appVersion` is the mlflow-oidc-auth release it targets (currently `9.0.0`). Its default `image.tag` is one
+immutable build of that release, `<mlflow>-<plugin>-<build date>`. The
+[image repository](https://github.com/mlflow-oidc/mlflow-tracking-server-docker) publishes every build under three tags:
 
 | Tag | Example | Moves? |
 |---|---|---|
-| plugin version | `9.0.0` | Yes, to each rebuild of that release (a new MLflow, a refreshed base image). The chart's default. |
-| MLflow, plugin and build date | `3.16.1-9.0.0-20261002` | Never. Set `image.tag` to this for reproducible deployments. |
+| MLflow, plugin and build date | `3.16.1-9.0.0-20261002` | Never. The chart's default. |
+| plugin version | `9.0.0` | Yes, to each rebuild of that release (a new MLflow, a refreshed base image). |
 | `latest` | `latest` | Yes, to every build. Not recommended. |
 
-When a new plugin release is published, a scheduled workflow opens a pull request here that moves `appVersion` to it.
+Because the default never moves, every node and every pod runs the same build. A moving tag would not give you that:
+a node that has it cached keeps the old build while a new node pulls the new one, possibly with a different MLflow.
+New builds (a new MLflow, a security rebuild of the base image) arrive as chart patch releases, and a new plugin
+release arrives as a chart minor or major release. A scheduled workflow opens the pull request for each.
 
 ## Upgrading
 
@@ -496,7 +500,7 @@ When a new plugin release is published, a scheduled workflow opens a pull reques
   - every existing service account starts accepting only plugin-issued tokens until an administrator binds it to an identity provider.
 - **`DEFAULT_MLFLOW_PERMISSION` now defaults to `NO_PERMISSIONS`** instead of `MANAGE`. Users only reach what they, or a group they belong to, have been granted.
   To keep the old behaviour, set `config.data.DEFAULT_MLFLOW_PERMISSION: "MANAGE"` explicitly. That gives every signed-in user `MANAGE` on everything nobody granted them anything on.
-- **The default image tag works again.** Chart 3.0.0 defaulted to the tag `7.0.0`, which was never published. If you set `image.tag` to work around that, you can remove it.
+- **The default image exists again, and it is an immutable build.** Chart 3.0.0 defaulted to the tag `7.0.0`, which was never published. If you set `image.tag` to work around that, you can remove it.
 
 ## Signature validation
 

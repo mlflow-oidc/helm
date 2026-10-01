@@ -20,8 +20,8 @@ dependencies:
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: Default to mlflow-oidc-auth 9.0.0 (image tag 9.0.0), which has breaking changes; see the chart README's upgrade notes
+      description: Default to mlflow-oidc-auth 9.0.0, which has breaking changes; see the chart README's upgrade notes
     - kind: fixed
-      description: The default image tag now exists; chart 3.0.0 defaulted to 7.0.0, which was never published
+      description: The default image is an immutable build that exists; chart 3.0.0 defaulted to the tag 7.0.0, which was never published
     - kind: security
       description: DEFAULT_MLFLOW_PERMISSION now defaults to NO_PERMISSIONS, the plugin's own default, instead of MANAGE

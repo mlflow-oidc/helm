@@ -21,8 +21,13 @@ runs:
           name=$(echo "$row" | jq -r '.name')
           path=$(echo "$row" | jq -r '.path')
           (cd "$path" && (helm dependency build >/dev/null 2>&1 || helm dependency update >/dev/null 2>&1)) || true
-          images=$(helm template image-check "$path" \
-            | grep -E '^[[:space:]]*(- )?image:' \
+          if ! rendered=$(helm template image-check "$path" 2>&1); then
+            echo "::error title=Chart does not render::$name: $rendered"
+            missing=1
+            continue
+          fi
+          images=$(echo "$rendered" \
+            | { grep -E '^[[:space:]]*(- )?image:' || true; } \
             | sed -E 's/^[[:space:]]*(- )?image:[[:space:]]*//; s/["'"'"']//g' \
             | sort -u)
           if [ -z "$images" ]; then
@@ -39,3 +44,14 @@ runs:
           done
         done
         exit $missing
+
+    - name: Check the default image tag is an immutable build of appVersion
+      shell: bash
+      env:
+        CHARTS_JSON: ${{ inputs.charts_json }}
+      run: |
+        set -eo pipefail
+        # Only mlflow-tracking-server ships a versioned image; the other charts track `latest`.
+        for path in $(echo "$CHARTS_JSON" | jq -r '.[] | select(.name == "mlflow-tracking-server") | .path'); do
+          python3 "${{ github.action_path }}/../../scripts/image_tags.py" check "$path"
+        done
