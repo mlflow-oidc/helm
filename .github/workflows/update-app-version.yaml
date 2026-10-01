@@ -32,10 +32,10 @@ jobs:
       IMAGE_REPO: ${{ github.repository_owner }}/mlflow-tracking-server
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Find the newest image build
         id: versions
