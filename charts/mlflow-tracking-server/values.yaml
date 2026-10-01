@@ -10,8 +10,11 @@ image:
   # pullSecretsEnabled: true
   registry: ghcr.io/mlflow-oidc
   name: mlflow-tracking-server
-  # tag defaults to Chart.appVersion (currently 7.0.0) when omitted
-  # tag: "7.0.0"
+  # The immutable build this chart release ships: <mlflow>-<plugin>-<build date>. Its plugin part is
+  # always the chart's appVersion. A new build (a new MLflow, a security rebuild) arrives as a chart
+  # patch release, so every node and every pod runs the same image. The moving tag "<plugin>"
+  # (e.g. "9.0.2") also exists, but a node that has it cached keeps the old build.
+  tag: "3.16.1-9.0.2-20261001"
   pullPolicy: IfNotPresent
 
 # MLflow server startup arguments
@@ -75,8 +78,10 @@ config:
     OIDC_GROUP_NAME: "mlflow-users"
     # Groups with admin privileges (comma-separated or list)
     OIDC_ADMIN_GROUP_NAME: "mlflow-admins"
-    # Default permission for new resources: NO_PERMISSIONS, READ, USE, EDIT, MANAGE
-    DEFAULT_MLFLOW_PERMISSION: "MANAGE"
+    # Permission a user has on a resource nobody granted them anything on:
+    # NO_PERMISSIONS, READ, USE, EDIT, MANAGE. Anything but NO_PERMISSIONS opens every
+    # ungranted resource to every signed-in user, across workspaces.
+    DEFAULT_MLFLOW_PERMISSION: "NO_PERMISSIONS"
     # Optional: Permission source order (comma-separated)
     # PERMISSION_SOURCE_ORDER: "user,group,regex,group-regex"
     # Optional: Custom group detection plugin

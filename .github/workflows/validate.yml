@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+# Every job only reads the repository.
+permissions:
+  contents: read
+
 jobs:
   list-charts:
     runs-on: ubuntu-latest
@@ -12,7 +16,7 @@ jobs:
       charts: ${{ steps.list.outputs.charts }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -27,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -44,3 +48,18 @@ jobs:
             echo "Lint failed" >&2
             exit 1
           fi
+
+  images:
+    needs: list-charts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5
+
+      - name: Check default images exist
+        uses: ./.github/actions/check-images
+        with:
+          charts_json: ${{ needs.list-charts.outputs.charts }}
