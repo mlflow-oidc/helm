@@ -283,7 +283,59 @@ healthCheck:
   startup:
     path: health/ready
 
+# Pod-level security context.
 securityContext:
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  # seccompProfile:
+  #   type: RuntimeDefault
+
+# Container-level security context, applied to the app container and the db-upgrade init
+# container. Not rendered unless set. Unset fields fall back to the pod-level value, then to a
+# secure default (allowPrivilegeEscalation: false, readOnlyRootFilesystem: true). A read-only root
+# filesystem needs a writable /tmp and artifact directory: see the README's "Security context".
+# containerSecurityContext:
+#   allowPrivilegeEscalation: false
+#   readOnlyRootFilesystem: true
+#   capabilities:
+#     drop:
+#       - ALL
+#   seccompProfile:
+#     type: RuntimeDefault
+
+# -----------------------------------------------------------------
+# Database schema upgrade
+# -----------------------------------------------------------------
+# Run `mlflow db upgrade` on MLFLOW_BACKEND_STORE_URI in an init container before the tracking
+# server starts. A new MLflow version can need a schema migration, and the server refuses to start
+# on an outdated schema. The upgrade is a no-op when the schema is current, and also initializes
+# an empty database. Needs MLFLOW_BACKEND_STORE_URI as an env var (config, secret, secretRefs) or
+# as a secret file (secrets.mountAsFiles); a cloud config provider (Vault, AWS, Azure) cannot
+# supply it. See the README's "Database schema upgrades" before enabling it with several replicas.
+dbUpgrade:
+  enabled: false
+  # resources:
+  #   requests:
+  #     cpu: 100m
+  #     memory: 256Mi
+
+# -----------------------------------------------------------------
+# Init containers and native sidecars
+# -----------------------------------------------------------------
+# Rendered before the db-upgrade init container. An init container with `restartPolicy: Always`
+# is a Kubernetes native sidecar (Kubernetes 1.29+): it starts before and keeps running alongside
+# the tracking server (and db-upgrade), e.g. a Cloud SQL Auth Proxy for the backend store.
+# initContainers:
+#   - name: cloud-sql-proxy
+#     image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.1
+#     restartPolicy: Always
+#     args:
+#       - --port=5432
+#       - --private-ip
+#       - my-project:europe-west1:mlflow-db
+#     securityContext:
+#       runAsNonRoot: true
+#       allowPrivilegeEscalation: false
+#       capabilities:
+#         drop: ["ALL"]

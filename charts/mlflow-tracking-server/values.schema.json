@@ -259,9 +259,47 @@
         "runAsUser": { "type": "integer", "default": 1000 },
         "runAsGroup": { "type": "integer", "default": 1000 },
         "fsGroup": { "type": "integer", "default": 1000 },
-        "runAsNonRoot": { "type": "boolean", "default": true }
+        "runAsNonRoot": { "type": "boolean", "default": true },
+        "seccompProfile": { "$ref": "#/definitions/seccompProfile" }
       },
       "additionalProperties": false
+    },
+
+    "containerSecurityContext": {
+      "type": "object",
+      "description": "Container security context for the app and db-upgrade containers. Rendered only when set; unset fields fall back to securityContext, then to secure defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": { "type": "boolean" },
+        "readOnlyRootFilesystem": { "type": "boolean" },
+        "runAsNonRoot": { "type": "boolean" },
+        "runAsUser": { "type": "integer" },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "drop": { "type": "array", "items": { "type": "string" } },
+            "add": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "seccompProfile": { "$ref": "#/definitions/seccompProfile" }
+      },
+      "additionalProperties": false
+    },
+
+    "dbUpgrade": {
+      "type": "object",
+      "description": "Run `mlflow db upgrade` in an init container before the tracking server starts",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "resources": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+
+    "initContainers": {
+      "type": "array",
+      "description": "Init containers, rendered before db-upgrade. `restartPolicy: Always` makes one a native sidecar (Kubernetes 1.29+).",
+      "items": { "type": "object", "additionalProperties": true }
     },
 
     "volumes": {
@@ -289,5 +327,17 @@
       "additionalProperties": true
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "seccompProfile": {
+      "type": "object",
+      "description": "Seccomp profile, e.g. {\"type\": \"RuntimeDefault\"}",
+      "properties": {
+        "type": { "type": "string", "enum": ["RuntimeDefault", "Localhost", "Unconfined"] },
+        "localhostProfile": { "type": "string" }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    }
+  }
 }
