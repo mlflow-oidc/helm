@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+# Every job only reads the repository.
+permissions:
+  contents: read
+
 jobs:
   list-charts:
     runs-on: ubuntu-latest
