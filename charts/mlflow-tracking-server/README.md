@@ -17,6 +17,9 @@ Deploy MLflow Tracking Server with OIDC authentication using [mlflow-oidc-auth](
 - **Webhook Management** - Workspace-scoped webhook support with encrypted secrets
 - **Artifact Storage** - S3, Azure Blob, GCS support
 - **Health Endpoints** - Built-in liveness (`/health/live`) and readiness (`/health/ready`) probes
+- **Database Schema Upgrades** - Optional `mlflow db upgrade` init container before the server starts
+- **Init Containers and Native Sidecars** - e.g. a Cloud SQL Auth Proxy next to the server
+- **Restricted Pod Security** - Pod seccomp profile and container security context
 - **JWT Audience Validation** - Optional `aud` claim enforcement for production security
 - **Trusted Proxy Validation** - CIDR-based `X-Forwarded-*` header validation
 
@@ -472,6 +475,89 @@ healthCheck:
     path: health/ready
 ```
 
+## Database schema upgrades
+
+A new MLflow version can change the tracking database schema, and the tracking server refuses to start on an outdated
+schema. Every MLflow upgrade arrives as a new chart release (see [Image tags](#image-tags)), so enable the upgrade step
+to have the chart run `mlflow db upgrade` in an init container before the server starts:
+
+```yaml
+dbUpgrade:
+  enabled: true
+```
+
+- When the schema is already current it does nothing, and it creates the schema in an empty database, so it is safe on every pod start.
+- It reads `MLFLOW_BACKEND_STORE_URI` from the same configuration as the server: `config.data`, `secrets.externalSecretName`,
+  `secretRefs`, `env`, or a mounted secret file (`secrets.mountAsFiles`). A cloud config provider (Vault, AWS, Azure) cannot
+  supply it to the init container: run `mlflow db upgrade` yourself in that case.
+- During a rollout the old pods keep serving against the upgraded schema until they are replaced. Read MLflow's
+  [migration notes](https://mlflow.org/docs/latest/self-hosting/migration/) for the versions you cross.
+- **Several replicas:** each new pod runs the upgrade. When a rollout starts several pods at once, they can race on the same
+  migration; a pod that loses retries its init container and then finds the schema current. MySQL does not run schema changes
+  in a transaction, so with MySQL scale to one replica (or use `deploymentStrategy: Recreate`) for an MLflow upgrade.
+
+## Init containers and sidecars
+
+`initContainers` are rendered before the `db-upgrade` init container. An init container with `restartPolicy: Always` is a
+Kubernetes [native sidecar](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/) (Kubernetes 1.29+): it
+starts before the tracking server and keeps running alongside it. For example, the Cloud SQL Auth Proxy for a Cloud SQL backend
+store:
+
+```yaml
+initContainers:
+  - name: cloud-sql-proxy
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.1
+    restartPolicy: Always
+    args:
+      - --port=5432
+      - --private-ip
+      - my-project:europe-west1:mlflow-db
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+```
+
+with `MLFLOW_BACKEND_STORE_URI` (and `OIDC_USERS_DB_URI`) pointing at `postgresql://...@127.0.0.1:5432/...`. The proxy also
+serves the `db-upgrade` init container, which runs after it.
+
+## Security context
+
+`securityContext` is the pod-level context. `containerSecurityContext` applies to the tracking server and `db-upgrade`
+containers. It is not rendered unless set, and any field left unset falls back to the pod-level value, then to a secure default
+(`allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`).
+
+These values meet the Kubernetes [Restricted Pod Security Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted).
+The image runs on a read-only root filesystem as long as `/tmp` and the local artifact directory are writable:
+
+```yaml
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: artifacts            # or a PersistentVolumeClaim; not needed with an object store
+    emptyDir: {}
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: artifacts
+    mountPath: /mlflow-data    # MLFLOW_ARTIFACTS_DESTINATION
+```
+
 ## Image tags
 
 The chart's `appVersion` is the mlflow-oidc-auth release it targets (currently `9.0.2`). Its default `image.tag` is one
@@ -490,6 +576,11 @@ New builds (a new MLflow, a security rebuild of the base image) arrive as chart 
 release arrives as a chart minor or major release. A scheduled workflow opens the pull request for each.
 
 ## Upgrading
+
+### 4.0.x to 4.1.0
+
+Nothing to change: the new settings (`containerSecurityContext`, `securityContext.seccompProfile`, `initContainers`,
+`dbUpgrade`) are off unless you set them, and a chart that sets none renders the same manifests as 4.0.x.
 
 ### 3.x to 4.0.0
 
