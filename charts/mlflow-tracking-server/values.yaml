@@ -14,7 +14,7 @@ image:
   # always the chart's appVersion. A new build (a new MLflow, a security rebuild) arrives as a chart
   # patch release, so every node and every pod runs the same image. The moving tag "<plugin>"
   # (e.g. "9.0.2") also exists, but a node that has it cached keeps the old build.
-  tag: "3.16.1-9.0.2-20261001"
+  tag: "3.17.0-9.0.4-20261008"
   pullPolicy: IfNotPresent
 
 # MLflow server startup arguments
