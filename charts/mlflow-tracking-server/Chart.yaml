@@ -3,8 +3,8 @@ name: mlflow-tracking-server
 description: A Helm chart for MlFlow Tracking Server
 icon: https://raw.githubusercontent.com/mlflow-oidc/mlflow-oidc-auth/refs/heads/main/web-react/public/favicon.svg
 type: application
-version: 4.1.0
-appVersion: "9.0.2"
+version: 5.0.0
+appVersion: "11.0.1"
 home: https://github.com/mlflow-oidc/helm
 sources:
   - https://github.com/mlflow-oidc/helm
@@ -19,9 +19,5 @@ dependencies:
     version: 2.4.0
 annotations:
   artifacthub.io/changes: |
-    - kind: added
-      description: Pod seccompProfile and an opt-in container security context (containerSecurityContext), enough for the Restricted Pod Security Standard
-    - kind: added
-      description: initContainers, including Kubernetes native sidecars (restartPolicy Always), e.g. a Cloud SQL Auth Proxy
-    - kind: added
-      description: dbUpgrade.enabled runs mlflow db upgrade in an init container before the tracking server starts
+    - kind: changed
+      description: Default to mlflow-oidc-auth 11.0.1, image 3.17.1-11.0.1-20261020
