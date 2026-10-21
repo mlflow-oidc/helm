@@ -560,7 +560,7 @@ volumeMounts:
 
 ## Image tags
 
-The chart's `appVersion` is the mlflow-oidc-auth release it targets (currently `9.0.2`). Its default `image.tag` is one
+The chart's `appVersion` is the mlflow-oidc-auth release it targets (currently `11.0.2`). Its default `image.tag` is one
 immutable build of that release, `<mlflow>-<plugin>-<build date>`. The
 [image repository](https://github.com/mlflow-oidc/mlflow-tracking-server-docker) publishes every build under three tags:
 
